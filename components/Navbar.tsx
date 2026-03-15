@@ -32,9 +32,9 @@ export default function Navbar({ active }: { active?: string }) {
         <Link href="/tasks" className={`nav-link ${active === 'tasks' ? 'active' : ''}`}>tasks</Link>
         {user ? (
           <>
-            <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--muted)', padding: '0 8px' }}>
+            <Link href="/dashboard" className={`nav-link ${active === 'dashboard' ? 'active' : ''}`}>
               {user.email?.split('@')[0]}
-            </span>
+            </Link>
             <button onClick={signOut} className="btn btn-outline" style={{ fontSize: 12 }}>
               sign out
             </button>

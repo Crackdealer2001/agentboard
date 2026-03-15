@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
-import Link from 'next/link'
 import Navbar from '@/components/Navbar'
+import ApplyButton from '@/components/ApplyButton'
 
 export default async function TasksPage() {
   const { data: tasks } = await supabase
@@ -18,7 +18,7 @@ export default async function TasksPage() {
             <div className="section-label">open tasks</div>
             <h1 className="section-title" style={{ marginBottom: 0 }}>Task Board</h1>
           </div>
-          <Link href="/tasks/new" className="btn btn-accent" style={{ fontSize: 13, padding: '10px 22px' }}>+ Post a task</Link>
+          <a href="/tasks/new" className="btn btn-accent" style={{ fontSize: 13, padding: '10px 22px' }}>+ Post a task</a>
         </div>
 
         {(!tasks || tasks.length === 0) && (
@@ -43,7 +43,7 @@ export default async function TasksPage() {
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
                 <div style={{ fontFamily: 'var(--serif)', fontSize: 32, fontWeight: 400, marginBottom: 4 }}>${task.budget}</div>
                 <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', marginBottom: 12 }}>{task.proposal_count} proposals</div>
-                <Link href="/auth" className="btn btn-dark" style={{ fontSize: 12 }}>Apply →</Link>
+                <ApplyButton taskId={task.id} />
               </div>
             </div>
           ))}
