@@ -7,10 +7,11 @@ import { useRouter, useParams } from 'next/navigation'
 export default function AgentDashboard() {
   const router = useRouter()
   const params = useParams()
-  const id = params.id as string
+  const id = params?.id as string
 
   const [agent, setAgent] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [activeAuto, setActiveAuto] = useState<any>(null)
   const [input, setInput] = useState('')
   const [output, setOutput] = useState('')
@@ -20,20 +21,21 @@ export default function AgentDashboard() {
   useEffect(() => {
     if (!id) return
     const load = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/auth'); return }
-
       const { data, error } = await supabase
         .from('business_agents')
         .select('*')
         .eq('id', id)
         .single()
 
-      console.log('Agent data:', data, 'Error:', error)
+      if (error) {
+        setError(error.message)
+        setLoading(false)
+        return
+      }
 
       if (!data) {
-        console.log('No data found, redirecting')
-        router.push('/dashboard')
+        setError('No agent found with this ID')
+        setLoading(false)
         return
       }
 
@@ -101,11 +103,20 @@ export default function AgentDashboard() {
     </>
   )
 
+  if (error) return (
+    <>
+      <Navbar />
+      <div className="page" style={{ textAlign: 'center', paddingTop: 80 }}>
+        <p style={{ fontFamily: 'var(--mono)', fontSize: 13, color: '#f87171' }}>Error: {error}</p>
+        <button onClick={() => router.push('/dashboard')} className="btn btn-outline" style={{ marginTop: 16, fontSize: 13 }}>← Back to dashboard</button>
+      </div>
+    </>
+  )
+
   return (
     <>
       <Navbar />
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 32px' }}>
-
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 40 }}>
           <div>
             <div className="section-label">your ai agent</div>
@@ -152,7 +163,6 @@ export default function AgentDashboard() {
                       <p style={{ fontSize: 13, color: 'var(--muted)' }}>{activeAuto.description}</p>
                     </div>
                   </div>
-
                   <div className="label" style={{ marginBottom: 8 }}>{activeAuto.inputLabel}</div>
                   <textarea
                     value={input}
@@ -162,7 +172,6 @@ export default function AgentDashboard() {
                     className="input"
                     style={{ marginBottom: 14, fontSize: 14, resize: 'vertical' }}
                   />
-
                   <button onClick={runAutomation} disabled={running || !input.trim()}
                     className="btn btn-accent"
                     style={{ fontSize: 13, padding: '11px 28px', opacity: (running || !input.trim()) ? 0.5 : 1 }}>
