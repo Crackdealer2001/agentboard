@@ -1,13 +1,15 @@
 import { createClient } from '@supabase/supabase-js'
 import AgentClient from './AgentClient'
+import { headers } from 'next/headers'
 
-export default async function AgentPage({
-  params,
-}: {
-  params: Promise<{ id: string }>
-}) {
-  const resolvedParams = await params
-  const id = resolvedParams.id
+export default async function AgentPage() {
+  const headersList = await headers()
+  const pathname = headersList.get('x-invoke-path') || 
+                   headersList.get('x-pathname') || 
+                   headersList.get('referer') || ''
+  
+  const segments = pathname.split('/')
+  const id = segments[segments.length - 1]
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -22,10 +24,9 @@ export default async function AgentPage({
   if (error || !agent) {
     return (
       <div style={{ fontFamily: 'sans-serif', padding: 40, color: 'white', background: '#080808', minHeight: '100vh' }}>
-        <p style={{ color: '#f87171', marginBottom: 16 }}>
-          Error: {error?.message || 'Agent not found'}
-        </p>
+        <p style={{ color: '#f87171', marginBottom: 16 }}>Error: {error?.message || 'Agent not found'}</p>
         <p style={{ color: '#666', fontSize: 13 }}>ID: {id}</p>
+        <p style={{ color: '#666', fontSize: 13 }}>Path: {pathname}</p>
         <a href="/dashboard" style={{ color: '#c8f135' }}>← Back to dashboard</a>
       </div>
     )
