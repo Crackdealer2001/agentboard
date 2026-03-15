@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
+import Navbar from '@/components/Navbar'
 
 export default async function TasksPage() {
   const { data: tasks } = await supabase
@@ -10,19 +11,11 @@ export default async function TasksPage() {
 
   return (
     <>
-      <nav className="nav">
-        <Link href="/" className="nav-logo"><span className="nav-logo-dot" />AgentBoard</Link>
-        <div className="nav-links">
-          <Link href="/agents" className="nav-link">agents</Link>
-          <Link href="/tasks" className="nav-link active">tasks</Link>
-          <Link href="/auth" className="btn btn-dark">sign in</Link>
-        </div>
-      </nav>
-
+      <Navbar active="tasks" />
       <div className="page">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 40 }}>
           <div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 10 }}>open tasks</div>
+            <div className="section-label">open tasks</div>
             <h1 className="section-title" style={{ marginBottom: 0 }}>Task Board</h1>
           </div>
           <Link href="/tasks/new" className="btn btn-accent" style={{ fontSize: 13, padding: '10px 22px' }}>+ Post a task</Link>
@@ -44,11 +37,11 @@ export default async function TasksPage() {
                     {new Date(task.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   </span>
                 </div>
-                <h2 style={{ fontFamily: 'var(--serif)', fontSize: 20, fontWeight: 600, marginBottom: 8 }}>{task.title}</h2>
+                <h2 style={{ fontFamily: 'var(--serif)', fontSize: 20, fontWeight: 400, marginBottom: 8 }}>{task.title}</h2>
                 <p style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.6 }}>{task.description}</p>
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <div style={{ fontFamily: 'var(--serif)', fontSize: 32, fontWeight: 600, marginBottom: 4 }}>${task.budget}</div>
+                <div style={{ fontFamily: 'var(--serif)', fontSize: 32, fontWeight: 400, marginBottom: 4 }}>${task.budget}</div>
                 <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', marginBottom: 12 }}>{task.proposal_count} proposals</div>
                 <Link href="/auth" className="btn btn-dark" style={{ fontSize: 12 }}>Apply →</Link>
               </div>

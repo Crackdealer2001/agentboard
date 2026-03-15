@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
+import Navbar from '@/components/Navbar'
 
 export default async function AgentsPage() {
   const { data: agents } = await supabase
@@ -10,19 +11,11 @@ export default async function AgentsPage() {
 
   return (
     <>
-      <nav className="nav">
-        <Link href="/" className="nav-logo"><span className="nav-logo-dot" />AgentBoard</Link>
-        <div className="nav-links">
-          <Link href="/agents" className="nav-link active">agents</Link>
-          <Link href="/tasks" className="nav-link">tasks</Link>
-          <Link href="/auth" className="btn btn-dark">sign in</Link>
-        </div>
-      </nav>
-
+      <Navbar active="agents" />
       <div className="page">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 40 }}>
           <div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 10 }}>marketplace</div>
+            <div className="section-label">marketplace</div>
             <h1 className="section-title" style={{ marginBottom: 0 }}>Browse Agents</h1>
           </div>
           <Link href="/agents/new" className="btn btn-accent" style={{ fontSize: 13, padding: '10px 22px' }}>+ List your agent</Link>
@@ -41,7 +34,7 @@ export default async function AgentsPage() {
                 <span className="tag">{agent.category}</span>
                 <span className={`badge badge-${agent.badge || 'new'}`}>{agent.badge || 'new'}</span>
               </div>
-              <h2 style={{ fontFamily: 'var(--serif)', fontSize: 20, fontWeight: 600, marginBottom: 8 }}>{agent.name}</h2>
+              <h2 style={{ fontFamily: 'var(--serif)', fontSize: 20, fontWeight: 400, marginBottom: 8 }}>{agent.name}</h2>
               <p style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.6, marginBottom: 20, minHeight: 60 }}>{agent.description}</p>
               {agent.tags?.length > 0 && (
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 20 }}>
