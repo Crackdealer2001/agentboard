@@ -10,6 +10,7 @@ export default function ApplyButton({ taskId }: { taskId: string }) {
   const [bid, setBid] = useState('')
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
+  const [error, setError] = useState('')
 
   const handleApply = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -18,26 +19,47 @@ export default function ApplyButton({ taskId }: { taskId: string }) {
   }
 
   const handleSubmit = async () => {
+    if (!message || !bid) { setError('Please add a message and bid amount.'); return }
     setLoading(true)
+    setError('')
+
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/auth'); return }
 
-    const { error } = await supabase.from('proposals').insert({
+    const { error: insertError } = await supabase.from('proposals').insert({
       task_id: taskId,
       user_id: user.id,
       message,
       bid_amount: Number(bid),
     })
 
-    if (!error) {
-      setDone(true)
-      setShowForm(false)
+    if (insertError) {
+      setError(insertError.message)
+      setLoading(false)
+      return
     }
+
+    try {
+      const res = await fetch('/api/notify-proposal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskId, message, bidAmount: bid }),
+      })
+      const data = await res.json()
+      console.log('Email response:', data)
+    } catch (err) {
+      console.error('Email error:', err)
+    }
+
+    setDone(true)
+    setShowForm(false)
     setLoading(false)
   }
 
   if (done) return (
-    <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: '#4ade80' }}>applied ✓</span>
+    <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: '#4ade80' }}>
+      applied ✓
+    </span>
   )
 
   if (showForm) return (
@@ -58,11 +80,25 @@ export default function ApplyButton({ taskId }: { taskId: string }) {
         className="input"
         style={{ marginBottom: 8, fontSize: 13 }}
       />
+      {error && (
+        <p style={{ fontFamily: 'var(--mono)', fontSize: 12, color: '#f87171', marginBottom: 8 }}>
+          {error}
+        </p>
+      )}
       <div style={{ display: 'flex', gap: 8 }}>
-        <button onClick={handleSubmit} disabled={loading} className="btn btn-accent" style={{ fontSize: 12, flex: 1 }}>
+        <button
+          onClick={handleSubmit}
+          disabled={loading}
+          className="btn btn-accent"
+          style={{ fontSize: 12, flex: 1, opacity: loading ? 0.6 : 1 }}
+        >
           {loading ? 'Sending...' : 'Submit →'}
         </button>
-        <button onClick={() => setShowForm(false)} className="btn btn-outline" style={{ fontSize: 12 }}>
+        <button
+          onClick={() => { setShowForm(false); setError('') }}
+          className="btn btn-outline"
+          style={{ fontSize: 12 }}
+        >
           Cancel
         </button>
       </div>
