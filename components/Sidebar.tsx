@@ -46,7 +46,7 @@ export default function Sidebar() {
       className={`sidebar-item ${isActive(href) ? 'active' : ''}`}
       onClick={() => setMobileOpen(false)}>
       {icon}
-      <span style={{ fontFamily: "'Sora', sans-serif" }}>{label}</span>
+      <span>{label}</span>
       {badge && <span className="sidebar-badge">{badge}</span>}
     </Link>
   )
@@ -88,21 +88,21 @@ export default function Sidebar() {
                   background: 'var(--bg4)', border: '1px solid var(--border2)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 11, flexShrink: 0, color: 'var(--fg2)', fontWeight: 700,
-                  fontFamily: "'Sora', sans-serif",
+                  fontFamily: 'var(--sidebar-font)',
                 }}>
                   {agent.agent_name?.[0]}
                 </div>
                 <div style={{ overflow: 'hidden' }}>
                   <div style={{
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    fontSize: 13, fontFamily: "'Sora', sans-serif", fontWeight: 500,
+                    fontSize: 13, fontFamily: 'var(--sidebar-font)', fontWeight: 500,
                   }}>
                     {agent.agent_name}
                   </div>
                   <div style={{
                     fontSize: 11, color: 'var(--fg3)',
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    fontFamily: "'Sora', sans-serif",
+                    fontFamily: 'var(--sidebar-font)',
                   }}>
                     {agent.business_name}
                   </div>
@@ -138,14 +138,14 @@ export default function Sidebar() {
               <div style={{
                 fontSize: 13, fontWeight: 600,
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                color: 'var(--fg)', fontFamily: "'Sora', sans-serif",
+                color: 'var(--fg)', fontFamily: 'var(--sidebar-font)',
               }}>
                 {user.user_metadata?.full_name || user.email?.split('@')[0]}
               </div>
               <div style={{
                 fontSize: 11, color: 'var(--fg3)',
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                fontFamily: "'Sora', sans-serif",
+                fontFamily: 'var(--sidebar-font)',
               }}>
                 {user.email}
               </div>
@@ -165,7 +165,6 @@ export default function Sidebar() {
         <SidebarContent />
       </aside>
 
-      {/* Mobile header */}
       <div style={{
         display: 'none',
         position: 'fixed', top: 0, left: 0, right: 0,
@@ -186,7 +185,6 @@ export default function Sidebar() {
         </button>
       </div>
 
-      {/* Mobile overlay */}
       {mobileOpen && (
         <div
           style={{ position: 'fixed', inset: 0, zIndex: 55, background: 'rgba(0,0,0,0.5)' }}
