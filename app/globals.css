@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -24,7 +24,7 @@
   --sans:         'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --mono:         'DM Mono', 'Fira Code', monospace;
   --serif:        'Instrument Serif', Georgia, serif;
-  --sidebar-font: 'Outfit', 'Inter', sans-serif;
+  --sidebar-font: 'Plus Jakarta Sans', sans-serif;
   --sidebar-width: 260px;
   --header-height: 48px;
 }
@@ -120,16 +120,16 @@ body {
   align-items: center;
   justify-content: center;
   color: #0a0a0a;
-  font-family: var(--sidebar-font);
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 13px;
   font-weight: 700;
   flex-shrink: 0;
 }
 
 .sidebar-logo-text {
-  font-family: var(--sidebar-font);
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--fg);
   letter-spacing: -0.3px;
 }
@@ -140,9 +140,9 @@ body {
 }
 
 .sidebar-section-label {
-  font-family: var(--sidebar-font);
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--fg3);
   letter-spacing: 1.2px;
   text-transform: uppercase;
@@ -157,7 +157,7 @@ body {
   padding: 9px 10px;
   border-radius: 6px;
   font-size: 14px;
-  font-family: var(--sidebar-font);
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 500;
   color: var(--fg2);
   text-decoration: none;
@@ -178,9 +178,9 @@ body {
 
 .sidebar-badge {
   margin-left: auto;
-  font-family: var(--sidebar-font);
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 700;
   padding: 1px 6px;
   background: var(--bg4);
   border: 1px solid var(--border2);
@@ -215,9 +215,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--sidebar-font);
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--fg2);
   flex-shrink: 0;
 }
@@ -397,9 +397,9 @@ body {
   height: 20px;
   padding: 0 8px;
   border-radius: 10px;
-  font-family: var(--sidebar-font);
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 10px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .badge-green  { background: #0d2e14; color: #4ade80; border: 1px solid #1a4a24; }
@@ -595,7 +595,7 @@ body {
   align-items: center;
   gap: 8px;
   text-decoration: none;
-  font-family: var(--sidebar-font);
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 16px;
   font-weight: 700;
   color: var(--fg);
@@ -616,7 +616,7 @@ body {
 }
 
 .nav-link {
-  font-family: var(--sidebar-font);
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 14px;
   font-weight: 500;
   color: var(--fg3);
@@ -637,9 +637,9 @@ body {
 }
 
 .section-label {
-  font-family: var(--sidebar-font);
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--fg3);
   letter-spacing: 1.5px;
   text-transform: uppercase;
