@@ -9,14 +9,19 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
   const automations = agent.automations as Record<string, unknown>[]
   const [activeAuto, setActiveAuto] = useState<Record<string, unknown>>(automations?.[0])
   const [input, setInput] = useState('')
+  const [customerEmail, setCustomerEmail] = useState('')
   const [output, setOutput] = useState('')
   const [running, setRunning] = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
   const [history, setHistory] = useState<Record<string, unknown>[]>([])
+  const [status, setStatus] = useState('')
 
   const runAutomation = async () => {
     if (!input.trim() || !activeAuto) return
     setRunning(true)
     setOutput('')
+    setEmailSent(false)
+    setStatus('Generating response...')
 
     const response = await fetch('/api/run-automation', {
       method: 'POST',
@@ -29,21 +34,50 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
     })
 
     const data = await response.json()
+
     if (data.output) {
       setOutput(data.output)
+      setStatus('Response generated!')
+
       await supabase.from('automation_runs').insert({
         business_agent_id: agent.id,
         automation_type: activeAuto.title,
         input,
         output: data.output,
       })
+
       setHistory(prev => [{
         automation_type: activeAuto.title,
         input,
         output: data.output,
         created_at: new Date().toISOString()
       }, ...prev])
+
+      if (customerEmail.trim()) {
+        setStatus('Sending email to customer...')
+        const emailRes = await fetch('/api/send-automation-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: customerEmail,
+            subject: `${agent.business_name} — ${activeAuto.title}`,
+            body: data.output,
+            businessName: agent.business_name,
+            agentName: agent.agent_name,
+          }),
+        })
+        const emailData = await emailRes.json()
+        if (emailData.success) {
+          setEmailSent(true)
+          setStatus('Done! Email sent to customer automatically.')
+        } else {
+          setStatus('Response ready. Email could not be sent: ' + emailData.error)
+        }
+      } else {
+        setStatus('Done! Copy the response or add a customer email to send automatically.')
+      }
     }
+
     setRunning(false)
   }
 
@@ -73,7 +107,7 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
             <div className="label" style={{ marginBottom: 12 }}>automations</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {automations?.map((auto) => (
-                <button key={auto.id as string} onClick={() => { setActiveAuto(auto); setInput(''); setOutput('') }}
+                <button key={auto.id as string} onClick={() => { setActiveAuto(auto); setInput(''); setOutput(''); setEmailSent(false); setStatus('') }}
                   style={{
                     textAlign: 'left', padding: '14px 16px', borderRadius: 12, cursor: 'pointer',
                     background: activeAuto?.id === auto.id ? 'var(--fg)' : 'var(--bg2)',
@@ -95,13 +129,14 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
             {activeAuto && (
               <div>
                 <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, marginBottom: 20 }}>
-                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16 }}>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 20 }}>
                     <span style={{ fontSize: 32 }}>{activeAuto.icon as string}</span>
                     <div>
                       <h2 style={{ fontFamily: 'var(--serif)', fontSize: 24, fontWeight: 400, marginBottom: 4 }}>{activeAuto.title as string}</h2>
                       <p style={{ fontSize: 13, color: 'var(--muted)' }}>{activeAuto.description as string}</p>
                     </div>
                   </div>
+
                   <div className="label" style={{ marginBottom: 8 }}>{activeAuto.inputLabel as string}</div>
                   <textarea
                     value={input}
@@ -111,18 +146,42 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
                     className="input"
                     style={{ marginBottom: 14, fontSize: 14, resize: 'vertical' }}
                   />
+
+                  <div className="label" style={{ marginBottom: 8 }}>customer email <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(optional — agent will send response automatically)</span></div>
+                  <input
+                    type="email"
+                    value={customerEmail}
+                    onChange={e => setCustomerEmail(e.target.value)}
+                    placeholder="customer@example.com"
+                    className="input"
+                    style={{ marginBottom: 16, fontSize: 14 }}
+                  />
+
                   <button onClick={runAutomation} disabled={running || !input.trim()}
                     className="btn btn-accent"
                     style={{ fontSize: 13, padding: '11px 28px', opacity: (running || !input.trim()) ? 0.5 : 1 }}>
-                    {running ? 'Running...' : `Run ${activeAuto.title as string} ✦`}
+                    {running ? status || 'Running...' : `Run ${activeAuto.title as string} ✦`}
                   </button>
+
+                  {status && !running && (
+                    <p style={{ fontFamily: 'var(--mono)', fontSize: 12, color: emailSent ? '#4ade80' : 'var(--muted)', marginTop: 12 }}>
+                      {emailSent ? '✓ ' : ''}{status}
+                    </p>
+                  )}
                 </div>
 
                 {output && (
                   <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, marginBottom: 20 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                       <div className="label">{activeAuto.outputLabel as string}</div>
-                      <button onClick={copyOutput} className="btn btn-outline" style={{ fontSize: 11, padding: '5px 12px' }}>Copy →</button>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        {emailSent && (
+                          <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: '#4ade80', padding: '5px 12px', background: '#0d2e14', borderRadius: 6, border: '1px solid #1a4a24' }}>
+                            ✓ emailed
+                          </span>
+                        )}
+                        <button onClick={copyOutput} className="btn btn-outline" style={{ fontSize: 11, padding: '5px 12px' }}>Copy →</button>
+                      </div>
                     </div>
                     <div style={{ fontSize: 14, lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{output}</div>
                   </div>
