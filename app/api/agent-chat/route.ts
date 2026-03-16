@@ -11,6 +11,135 @@ export async function POST(req: NextRequest) {
     dueDate.setDate(dueDate.getDate() + 30)
     const formatDate = (d: Date) => d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
 
+    const buildDocumentHTML = (type: string, content: string, metadata: Record<string, unknown>) => {
+      const docNumber = `DOC-${Date.now().toString().slice(-6)}`
+      return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f3f4f6;padding:48px 24px;">
+<tr><td align="center">
+<table width="680" cellpadding="0" cellspacing="0" border="0" style="background:#ffffff;border-radius:16px;overflow:hidden;">
+
+  <!-- HEADER -->
+  <tr>
+    <td style="background:#0a0a0a;padding:40px 48px;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td valign="top">
+            <div style="color:#9ca3af;font-size:10px;letter-spacing:2px;text-transform:uppercase;font-family:monospace;margin-bottom:8px;">FROM</div>
+            <div style="color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.5px;">${agent.business_name}</div>
+          </td>
+          <td align="right" valign="top">
+            <div style="color:#9ca3af;font-size:10px;letter-spacing:2px;text-transform:uppercase;font-family:monospace;margin-bottom:8px;">DOCUMENT</div>
+            <div style="color:#ffffff;font-size:22px;font-weight:800;letter-spacing:-0.5px;">${type}</div>
+            <div style="margin-top:10px;">
+              <span style="background:#c8f135;color:#0a0a0a;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:5px 14px;border-radius:20px;font-family:monospace;">${docNumber}</span>
+            </div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- DATE BAR -->
+  <tr>
+    <td style="background:#111111;padding:18px 48px;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td>
+            <div style="color:#6b7280;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:5px;">DATE</div>
+            <div style="color:#ffffff;font-size:13px;font-weight:500;">${formatDate(today)}</div>
+          </td>
+          ${metadata?.party1 ? `<td>
+            <div style="color:#6b7280;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:5px;">PARTY 1</div>
+            <div style="color:#ffffff;font-size:13px;font-weight:500;">${metadata.party1}</div>
+          </td>` : ''}
+          ${metadata?.party2 ? `<td>
+            <div style="color:#6b7280;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:5px;">PARTY 2</div>
+            <div style="color:#c8f135;font-size:13px;font-weight:600;">${metadata.party2}</div>
+          </td>` : ''}
+          <td align="right">
+            <div style="color:#6b7280;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:5px;">PREPARED BY</div>
+            <div style="color:#ffffff;font-size:13px;font-weight:500;">${agent.agent_name}</div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- BODY -->
+  <tr>
+    <td style="padding:40px 48px;background:#ffffff;">
+
+      ${metadata?.title ? `
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:32px;">
+        <tr>
+          <td style="background:#f9fafb;border-left:4px solid #0a0a0a;padding:18px 24px;border-radius:0 8px 8px 0;">
+            <div style="color:#9ca3af;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:8px;">SUBJECT</div>
+            <div style="color:#0a0a0a;font-size:18px;font-weight:700;">${metadata.title}</div>
+          </td>
+        </tr>
+      </table>` : ''}
+
+      <!-- CONTENT -->
+      <div style="font-size:14px;line-height:1.9;color:#374151;">
+        ${content
+          .replace(/\*\*(.*?)\*\*/g, '<strong style="color:#0a0a0a;font-weight:700;">$1</strong>')
+          .replace(/^#{1,3}\s+(.+)$/gm, '<div style="font-size:16px;font-weight:700;color:#0a0a0a;margin:24px 0 10px;padding-bottom:8px;border-bottom:1px solid #e5e7eb;">$1</div>')
+          .replace(/^[-•]\s+(.+)$/gm, '<div style="padding:4px 0 4px 20px;position:relative;"><span style="position:absolute;left:6px;color:#c8f135;">▸</span>$1</div>')
+          .replace(/\n\n/g, '</p><p style="margin:0 0 14px;">')
+          .replace(/\n/g, '<br>')
+        }
+      </div>
+
+      <!-- SIGNATURE BLOCK -->
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:48px;">
+        <tr>
+          <td width="45%" style="padding:20px 0 0;">
+            <div style="border-top:2px solid #0a0a0a;padding-top:10px;">
+              <div style="font-size:12px;color:#6b7280;font-family:monospace;">SIGNATURE — ${agent.business_name}</div>
+              <div style="font-size:13px;color:#0a0a0a;margin-top:4px;font-weight:600;">Authorised Representative</div>
+            </div>
+          </td>
+          <td width="10%"></td>
+          ${metadata?.party2 ? `<td width="45%" style="padding:20px 0 0;">
+            <div style="border-top:2px solid #0a0a0a;padding-top:10px;">
+              <div style="font-size:12px;color:#6b7280;font-family:monospace;">SIGNATURE — ${metadata.party2}</div>
+              <div style="font-size:13px;color:#0a0a0a;margin-top:4px;font-weight:600;">Authorised Representative</div>
+            </div>
+          </td>` : ''}
+        </tr>
+      </table>
+
+    </td>
+  </tr>
+
+  <!-- FOOTER -->
+  <tr>
+    <td style="background:#f9fafb;padding:24px 48px;border-top:2px solid #0a0a0a;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td>
+            <div style="font-size:14px;font-weight:700;color:#0a0a0a;margin-bottom:3px;">${agent.business_name}</div>
+            <div style="font-size:11px;color:#9ca3af;font-family:monospace;">Generated by ${agent.agent_name} · ${formatDate(today)}</div>
+          </td>
+          <td align="right">
+            <div style="font-size:10px;color:#9ca3af;font-family:monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">DOCUMENT TYPE</div>
+            <div style="font-size:16px;font-weight:800;color:#0a0a0a;">${type}</div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>`
+    }
+
     const systemPrompt = `You are ${agent.agent_name}, a professional AI business agent for ${agent.business_name}.
 Industry: ${agent.industry}
 Tone: ${agent.tone}
@@ -21,9 +150,11 @@ TODAY: ${formatDate(today)}
 DUE DATE (invoices): ${formatDate(dueDate)}
 
 RULES:
-- Be brief. Never repeat yourself.
-- Never use ** for bold. Use plain text only.
-- Keep all documents SHORT and professional
+- Be brief and professional. No ** markdown bold.
+- Use plain text only in document content
+- Use clear headings with # for sections
+- Use - for bullet points
+- Keep documents focused and concise
 - Confirm task in ONE line at the end
 
 INVOICE FORMAT:
@@ -40,13 +171,60 @@ Total Due: $[amount]
 
 Then add: [SEND_INVOICE:email:invoiceNumber:clientName:subtotal:tax:total:desc|qty|rate|amount]
 
+CONTRACT FORMAT:
+Write a clean professional contract with these sections:
+# Parties
+# Services
+# Terms
+# Payment
+# Termination
+# Governing Law
+# Signatures
+
+Then add: [CREATE_DOCUMENT:CONTRACT:title|party1|party2]
+
+PROPOSAL FORMAT:
+Write with these sections:
+# Executive Summary
+# Scope of Work
+# Timeline
+# Investment
+# Next Steps
+
+Then add: [CREATE_DOCUMENT:PROPOSAL:title|clientName|date]
+
+REPORT FORMAT:
+Write with these sections:
+# Overview
+# Key Metrics
+# Highlights
+# Challenges
+# Recommendations
+
+Then add: [CREATE_DOCUMENT:REPORT:title|period|date]
+
+MEETING AGENDA FORMAT:
+Write with these sections:
+# Meeting Details
+# Attendees
+# Agenda Items
+# Action Items
+
+Then add: [CREATE_DOCUMENT:MEETING AGENDA:title|organizer|date]
+
+JOB LISTING FORMAT:
+Write with these sections:
+# About the Role
+# Responsibilities
+# Requirements
+# What We Offer
+# How to Apply
+
+Then add: [CREATE_DOCUMENT:JOB LISTING:title|company|date]
+
 EMAIL FORMAT:
 Keep emails SHORT - max 5 lines.
 Then add: [SEND_EMAIL:email:subject]
-
-CONTRACT FORMAT:
-Keep to ONE page max. Essential clauses only.
-Then add: [CREATE_DOCUMENT:CONTRACT:title|party1|party2|date]
 
 GENERAL:
 - Professional = short and clear
@@ -66,7 +244,7 @@ GENERAL:
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 1500,
+        max_tokens: 2000,
         system: systemPrompt,
         messages: [...conversationHistory, { role: 'user', content: message }],
       }),
@@ -112,7 +290,6 @@ GENERAL:
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f3f4f6;padding:48px 24px;">
 <tr><td align="center">
 <table width="600" cellpadding="0" cellspacing="0" border="0" style="background:#ffffff;border-radius:16px;overflow:hidden;">
-
   <tr>
     <td style="background:#0a0a0a;padding:40px 48px;">
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -132,7 +309,6 @@ GENERAL:
       </table>
     </td>
   </tr>
-
   <tr>
     <td style="background:#111111;padding:18px 48px;">
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -157,10 +333,8 @@ GENERAL:
       </table>
     </td>
   </tr>
-
   <tr>
     <td style="padding:40px 48px;background:#ffffff;">
-
       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:32px;">
         <tr>
           <td style="background:#f9fafb;border-left:4px solid #0a0a0a;padding:18px 24px;border-radius:0 8px 8px 0;">
@@ -170,7 +344,6 @@ GENERAL:
           </td>
         </tr>
       </table>
-
       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;border-radius:8px;overflow:hidden;">
         <tr style="background:#0a0a0a;">
           <td style="padding:12px 16px;color:#ffffff;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;">DESCRIPTION</td>
@@ -180,7 +353,6 @@ GENERAL:
         </tr>
         ${lineItemsHTML}
       </table>
-
       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:32px;">
         <tr>
           <td width="55%"></td>
@@ -202,7 +374,6 @@ GENERAL:
           </td>
         </tr>
       </table>
-
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
           <td style="background:#0a0a0a;border-radius:10px;padding:20px 24px;">
@@ -211,10 +382,8 @@ GENERAL:
           </td>
         </tr>
       </table>
-
     </td>
   </tr>
-
   <tr>
     <td style="background:#f9fafb;padding:24px 48px;border-top:2px solid #0a0a0a;">
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -231,14 +400,12 @@ GENERAL:
       </table>
     </td>
   </tr>
-
 </table>
 </td></tr>
 </table>
 </body>
 </html>`
 
-      // Save document to Supabase
       try {
         const supabase = createClient(
           process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -250,18 +417,13 @@ GENERAL:
             agent_id: agent.id,
             type: 'INVOICE',
             content: invoiceHTML,
-            metadata: { invoiceNumber, clientName, subtotal, tax, total, recipientEmail },
+            metadata: { invoiceNumber, clientName, subtotal, tax, total, recipientEmail, invoiceHTML },
           })
           .select()
           .single()
-
-        if (doc) {
-          documentId = doc.id
-          documentType = 'INVOICE'
-        }
+        if (doc) { documentId = doc.id; documentType = 'INVOICE' }
       } catch { }
 
-      // Send invoice email
       try {
         const resend = new Resend(process.env.RESEND_API_KEY)
         const { error } = await resend.emails.send({
@@ -339,19 +501,21 @@ GENERAL:
       } catch { }
     }
 
-    // Handle document creation
+    // Handle all other documents (CONTRACT, PROPOSAL, REPORT, MEETING AGENDA, JOB LISTING etc)
     const docMatch = reply.match(/\[CREATE_DOCUMENT:([^:]+):([^\]]+)\]/)
     if (docMatch && !invoiceMatch) {
-      documentType = docMatch[1]
+      documentType = docMatch[1].trim()
       const params = docMatch[2].split('|')
       reply = reply.replace(/\[CREATE_DOCUMENT:[^\]]+\]/g, '').trim()
 
       const metadata: Record<string, unknown> = {
-        title: params[0],
-        party1: params[1],
-        party2: params[2],
-        date: params[3] || formatDate(today),
+        title: params[0]?.trim(),
+        party1: params[1]?.trim() || agent.business_name,
+        party2: params[2]?.trim(),
+        date: params[3]?.trim() || formatDate(today),
       }
+
+      const docHTML = buildDocumentHTML(documentType, reply, metadata)
 
       try {
         const supabase = createClient(
@@ -360,12 +524,18 @@ GENERAL:
         )
         const { data: doc } = await supabase
           .from('documents')
-          .insert({ agent_id: agent.id, type: documentType, content: reply, metadata })
+          .insert({
+            agent_id: agent.id,
+            type: documentType,
+            content: docHTML,
+            metadata: { ...metadata, invoiceHTML: docHTML },
+          })
           .select()
           .single()
 
         if (doc) {
           documentId = doc.id
+          invoiceHTML = docHTML
           reply += `\n\n📄 ${documentType} ready — click to view and print.`
         }
       } catch { }
