@@ -1,7 +1,7 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import Navbar from '@/components/Navbar'
+import Sidebar from '@/components/Sidebar'
 import { useRouter } from 'next/navigation'
 
 interface Message {
@@ -198,32 +198,19 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
   const today = new Date()
   const upcomingEvents = calendarEvents.filter(e => e.event_date >= today.toISOString().split('T')[0]).slice(0, 5)
 
-  const IconManage = <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-  const IconCalendar = <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-  const IconAnalytics = <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
-  const IconAutomations = <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-  const IconChat = <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-  const IconGrid = <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-  const IconBack = <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-  const IconPrint = <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-  const IconView = <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-  const IconEvent = <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-  const IconCheck = <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
-
   return (
-    <>
-      <Navbar />
+    <div className="app-layout">
+      <Sidebar />
 
+      {/* Document preview modal */}
       {previewDoc && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 16, width: '100%', maxWidth: 740, maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-              <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--accent)' }}>{previewDoc.type} PREVIEW</div>
+        <div className="modal-overlay">
+          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 12, width: '100%', maxWidth: 740, maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--fg3)' }}>{previewDoc.type} PREVIEW</span>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => { const win = window.open('', '_blank'); if (win) { win.document.write(previewDoc.html); win.document.close(); win.print() } }} className="btn btn-accent" style={{ fontSize: 12, padding: '7px 16px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {IconPrint} Print / Save PDF
-                </button>
-                <button onClick={() => setPreviewDoc(null)} className="btn btn-outline" style={{ fontSize: 12, padding: '7px 16px' }}>Close</button>
+                <button onClick={() => { const win = window.open('', '_blank'); if (win) { win.document.write(previewDoc.html); win.document.close(); win.print() } }} className="btn btn-accent btn-sm">Print / PDF</button>
+                <button onClick={() => setPreviewDoc(null)} className="btn btn-outline btn-sm">Close</button>
               </div>
             </div>
             <div style={{ flex: 1, overflow: 'auto' }}>
@@ -233,67 +220,352 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
         </div>
       )}
 
-      <div style={{ maxWidth: 900, margin: '0 auto', padding: '32px 24px' }}>
-
+      <main className="app-main">
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32, flexWrap: 'wrap', gap: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <div style={{ width: 52, height: 52, borderRadius: 14, background: 'var(--fg)', color: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--serif)', fontSize: 22 }}>
-              {(agent.agent_name as string)?.[0]}
-            </div>
-            <div>
-              <h1 style={{ fontFamily: 'var(--serif)', fontSize: 24, fontWeight: 400, marginBottom: 2 }}>{agent.agent_name as string}</h1>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80' }} />
-                <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)' }}>active · {agent.business_name as string}</span>
-              </div>
-            </div>
+        <div className="app-header">
+          <button onClick={() => router.push('/dashboard')} className="btn btn-ghost btn-sm" style={{ gap: 6 }}>
+            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+            Back
+          </button>
+          <div style={{ width: 1, height: 16, background: 'var(--border2)' }} />
+          <span className="page-title">{agent.agent_name as string}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span className="status-dot green" />
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--fg3)' }}>active</span>
           </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button onClick={() => router.push(`/agent/${agent.id as string}/manage`)} className="btn btn-outline" style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-              {IconManage} Manage
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+            <button onClick={() => { setView('home') }} className={`btn btn-sm ${view === 'home' ? 'btn-primary' : 'btn-ghost'}`} style={{ fontSize: 12 }}>
+              Overview
             </button>
-            <button onClick={() => router.push(`/agent/${agent.id as string}/analytics`)} className="btn btn-outline" style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-              {IconAnalytics} Analytics
+            <button onClick={() => { setView('chat'); if (messages.length === 0) setMessages([{ role: 'assistant', content: `Hi! I'm ${agent.agent_name as string}, your AI assistant for ${agent.business_name as string}. What do you need done?`, timestamp: new Date().toISOString() }]) }} className={`btn btn-sm ${view === 'chat' ? 'btn-primary' : 'btn-ghost'}`} style={{ fontSize: 12 }}>
+              Chat
             </button>
-            <button onClick={() => router.push(`/agent/${agent.id as string}/automations`)} className="btn btn-outline" style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-              {IconAutomations} Automations
+            <button onClick={() => setView('calendar')} className={`btn btn-sm ${view === 'calendar' ? 'btn-primary' : 'btn-ghost'}`} style={{ fontSize: 12 }}>
+              Calendar {upcomingEvents.length > 0 && `(${upcomingEvents.length})`}
             </button>
-            <button onClick={() => setView(view === 'calendar' ? 'home' : 'calendar')} className="btn btn-outline" style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6, background: view === 'calendar' ? 'var(--fg)' : 'transparent', color: view === 'calendar' ? 'var(--bg)' : 'var(--fg)' }}>
-              {IconCalendar} Calendar {upcomingEvents.length > 0 && `(${upcomingEvents.length})`}
-            </button>
-            <button onClick={() => setView(view === 'home' ? 'chat' : 'home')} className="btn btn-outline" style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-              {view === 'home' ? <>{IconChat} Open chat</> : <>{IconGrid} Dashboard</>}
-            </button>
-            <button onClick={() => router.push('/dashboard')} className="btn btn-outline" style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-              {IconBack} Back
-            </button>
+            <button onClick={() => router.push(`/agent/${agent.id as string}/manage`)} className="btn btn-outline btn-sm" style={{ fontSize: 12 }}>Manage</button>
+            <button onClick={() => router.push(`/agent/${agent.id as string}/analytics`)} className="btn btn-outline btn-sm" style={{ fontSize: 12 }}>Analytics</button>
+            <button onClick={() => router.push(`/agent/${agent.id as string}/automations`)} className="btn btn-outline btn-sm" style={{ fontSize: 12 }}>Automations</button>
           </div>
         </div>
 
-        {/* CALENDAR VIEW */}
-        {view === 'calendar' && (
-          <div>
+        <div style={{ width: '100%', padding: '40px 48px' }}>
+
+          {/* HOME VIEW */}
+          {view === 'home' && (
+            <div>
+              {/* Agent banner */}
+              <div style={{
+                width: '100%',
+                background: 'var(--bg2)',
+                border: '1px solid var(--border)',
+                borderRadius: 12,
+                padding: '36px 40px',
+                marginBottom: 28,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: 20,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+                  <div style={{
+                    width: 64, height: 64, borderRadius: 16,
+                    background: 'var(--bg4)', border: '1px solid var(--border2)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontFamily: 'var(--sidebar-font)', fontSize: 28,
+                    color: 'var(--fg)', fontWeight: 700, flexShrink: 0,
+                  }}>
+                    {(agent.agent_name as string)?.[0]}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.5px', marginBottom: 6, color: 'var(--fg)' }}>
+                      {agent.agent_name as string}
+                    </div>
+                    <div style={{ fontSize: 15, color: 'var(--fg3)' }}>
+                      {agent.business_name as string} · {agent.industry as string}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => { setView('chat'); if (messages.length === 0) setMessages([{ role: 'assistant', content: `Hi! I'm ${agent.agent_name as string}, your AI assistant for ${agent.business_name as string}. What do you need done?`, timestamp: new Date().toISOString() }]) }}
+                  className="btn btn-accent"
+                  style={{ height: 44, padding: '0 28px', fontSize: 15, fontWeight: 600 }}>
+                  Start chatting →
+                </button>
+              </div>
+
+              {/* Stats row */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, 1fr)',
+                gap: 16,
+                marginBottom: 40,
+              }}>
+                {[
+                  { label: 'Tasks run', value: recentRuns.length, color: 'var(--accent)', icon: <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> },
+                  { label: 'Upcoming events', value: upcomingEvents.length, color: 'var(--blue)', icon: <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> },
+                  { label: 'Industry', value: agent.industry as string || '—', color: 'var(--purple)', icon: <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg> },
+                  { label: 'Tone', value: agent.tone as string || '—', color: 'var(--green)', icon: <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
+                ].map(stat => (
+                  <div key={stat.label} style={{
+                    background: 'var(--bg2)', border: '1px solid var(--border)',
+                    borderRadius: 10, padding: '24px 28px',
+                    display: 'flex', alignItems: 'center', gap: 18,
+                  }}>
+                    <div style={{
+                      width: 48, height: 48, borderRadius: 12,
+                      background: 'var(--bg3)', border: '1px solid var(--border2)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: stat.color, flexShrink: 0,
+                    }}>
+                      {stat.icon}
+                    </div>
+                    <div>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--fg3)', marginBottom: 6 }}>
+                        {stat.label}
+                      </div>
+                      <div style={{ fontSize: 22, fontWeight: 700, color: stat.color, lineHeight: 1 }}>
+                        {stat.value}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Upcoming events strip */}
+              {upcomingEvents.length > 0 && (
+                <div style={{ marginBottom: 36 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                    <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--fg)' }}>Upcoming events</div>
+                    <button onClick={() => setView('calendar')} className="btn btn-ghost btn-sm" style={{ fontSize: 12 }}>View calendar →</button>
+                  </div>
+                  <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }}>
+                    {upcomingEvents.map(event => (
+                      <div key={event.id} style={{
+                        flexShrink: 0, padding: '14px 18px',
+                        background: 'var(--bg2)', borderRadius: 10,
+                        border: '1px solid var(--border)',
+                        borderLeft: `3px solid ${EVENT_COLORS[event.event_type] || '#6b7280'}`,
+                        minWidth: 180,
+                      }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>{event.title}</div>
+                        <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--fg3)' }}>
+                          {new Date(event.event_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          {event.event_time && ` · ${formatEventTime(event.event_time)}`}
+                        </div>
+                        <div style={{ marginTop: 8 }}>
+                          <span style={{ fontFamily: 'var(--mono)', fontSize: 9, padding: '2px 6px', borderRadius: 4, background: `${EVENT_COLORS[event.event_type] || '#6b7280'}22`, color: EVENT_COLORS[event.event_type] || '#6b7280', border: `1px solid ${EVENT_COLORS[event.event_type] || '#6b7280'}44` }}>
+                            {event.event_type}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Quick actions */}
+              <div style={{ marginBottom: 36 }}>
+                <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--fg)', marginBottom: 14 }}>Quick actions</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+                  {QUICK_ACTIONS.map((action, i) => (
+                    <button key={i} onClick={() => startAction(action)}
+                      style={{
+                        textAlign: 'left', padding: '18px 20px',
+                        background: 'var(--bg2)', border: '1px solid var(--border)',
+                        borderRadius: 10, cursor: 'pointer', transition: 'all 0.15s',
+                      }}
+                      onMouseEnter={e => {
+                        (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border3)'
+                        ;(e.currentTarget as HTMLButtonElement).style.background = 'var(--bg3)'
+                      }}
+                      onMouseLeave={e => {
+                        (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'
+                        ;(e.currentTarget as HTMLButtonElement).style.background = 'var(--bg2)'
+                      }}>
+                      <div style={{ color: 'var(--fg3)', marginBottom: 10 }}>{action.icon}</div>
+                      <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--fg)' }}>{action.label}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Recent activity */}
+              {recentRuns.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--fg)', marginBottom: 14 }}>Recent activity</div>
+                  <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
+                    {recentRuns.map((run, i) => (
+                      <div key={i}
+                        style={{
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                          padding: '14px 20px', borderBottom: i < recentRuns.length - 1 ? '1px solid var(--border)' : 'none',
+                          cursor: 'pointer', transition: 'background 0.1s',
+                        }}
+                        onClick={() => { setView('chat'); setMessages([{ role: 'user', content: run.input as string, timestamp: run.created_at as string }, { role: 'assistant', content: run.output as string, timestamp: run.created_at as string }]) }}
+                        onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.background = 'var(--bg3)'}
+                        onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = 'transparent'}>
+                        <div style={{ overflow: 'hidden', flex: 1 }}>
+                          <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {(run.input as string)?.slice(0, 70)}{(run.input as string)?.length > 70 ? '...' : ''}
+                          </div>
+                          <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--fg3)' }}>
+                            {run.automation_type as string}
+                          </div>
+                        </div>
+                        <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--fg3)', flexShrink: 0, marginLeft: 20 }}>
+                          {timeAgo(run.created_at as string)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* CHAT VIEW */}
+          {view === 'chat' && (
+            <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 160px)' }}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+                {QUICK_ACTIONS.slice(0, 6).map((action, i) => (
+                  <button key={i} onClick={() => startAction(action)}
+                    style={{
+                      fontFamily: 'var(--mono)', fontSize: 11, padding: '6px 12px',
+                      background: 'var(--bg2)', border: '1px solid var(--border)',
+                      borderRadius: 20, cursor: 'pointer', color: 'var(--fg3)',
+                      transition: 'all 0.1s', display: 'flex', alignItems: 'center', gap: 6,
+                    }}
+                    onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.color = 'var(--fg)'}
+                    onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.color = 'var(--fg3)'}>
+                    {action.icon} {action.label}
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 16 }}>
+                {messages.map((msg, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                    <div style={{
+                      maxWidth: '75%',
+                      background: msg.role === 'user' ? 'var(--fg)' : 'var(--bg2)',
+                      color: msg.role === 'user' ? 'var(--bg)' : 'var(--fg)',
+                      border: `1px solid ${msg.role === 'user' ? 'var(--fg)' : 'var(--border)'}`,
+                      borderRadius: msg.role === 'user' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
+                      padding: '12px 16px',
+                    }}>
+                      {msg.role === 'assistant' && (
+                        <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)', marginBottom: 8, letterSpacing: 1 }}>
+                          {agent.agent_name as string}
+                        </div>
+                      )}
+                      <div style={{ fontSize: 14, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{msg.content}</div>
+
+                      {msg.emailSent && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--mono)', fontSize: 11, color: '#4ade80', marginTop: 10, padding: '6px 10px', background: '#0d2e14', borderRadius: 6, border: '1px solid #1a4a24', width: 'fit-content' }}>
+                          <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+                          Email sent
+                        </div>
+                      )}
+
+                      {msg.calendarEvent && (
+                        <div style={{ marginTop: 10, padding: '10px 14px', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <svg width="14" height="14" fill="none" stroke="#3b82f6" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: '#3b82f6', marginBottom: 2 }}>Added to calendar</div>
+                            <div style={{ fontSize: 13, fontWeight: 500 }}>{(msg.calendarEvent as Record<string, unknown>).title as string}</div>
+                            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--fg3)' }}>
+                              {new Date((msg.calendarEvent as Record<string, unknown>).event_date as string + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                              {(msg.calendarEvent as Record<string, unknown>).event_time && ` · ${formatEventTime((msg.calendarEvent as Record<string, unknown>).event_time as string)}`}
+                            </div>
+                          </div>
+                          <button onClick={() => setView('calendar')} style={{ fontFamily: 'var(--mono)', fontSize: 10, padding: '4px 8px', background: 'rgba(59,130,246,0.2)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 6, color: '#3b82f6', cursor: 'pointer', flexShrink: 0 }}>
+                            View →
+                          </button>
+                        </div>
+                      )}
+
+                      {msg.documentId && (
+                        <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          <button onClick={() => viewDocument(msg.documentId!, msg.documentType!, msg.invoiceHTML)}
+                            style={{ fontFamily: 'var(--mono)', fontSize: 11, padding: '7px 14px', background: 'var(--fg)', color: 'var(--bg)', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            View {msg.documentType}
+                          </button>
+                          <button onClick={() => { const win = window.open('', '_blank'); if (win && msg.invoiceHTML) { win.document.write(msg.invoiceHTML); win.document.close(); win.print() } }}
+                            style={{ fontFamily: 'var(--mono)', fontSize: 11, padding: '7px 14px', background: '#c8f135', color: '#0a0a0a', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                            Print / PDF
+                          </button>
+                        </div>
+                      )}
+
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--fg3)', marginTop: 8, opacity: 0.6 }}>
+                        {new Date(msg.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {running && (
+                  <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                    <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '14px 14px 14px 4px', padding: '12px 16px' }}>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)', marginBottom: 8, letterSpacing: 1 }}>
+                        {agent.agent_name as string}
+                      </div>
+                      <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                        {[0, 1, 2].map(i => (
+                          <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--fg3)', animation: `pulse 1.4s ease-in-out ${i * 0.2}s infinite` }} />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div ref={bottomRef} />
+              </div>
+
+              <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 16px', display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={`Tell ${agent.agent_name as string} what to do...`}
+                  rows={2}
+                  style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--sans)', fontSize: 14, color: 'var(--fg)', resize: 'none', lineHeight: 1.6 }}
+                />
+                <button onClick={sendMessage} disabled={running || !input.trim()} className="btn btn-accent"
+                  style={{ fontSize: 13, padding: '0 20px', flexShrink: 0, opacity: (running || !input.trim()) ? 0.5 : 1 }}>
+                  Send →
+                </button>
+              </div>
+              <p style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--fg3)', textAlign: 'center', marginTop: 8 }}>
+                Enter to send · Shift+Enter for new line
+              </p>
+            </div>
+          )}
+
+          {/* CALENDAR VIEW */}
+          {view === 'calendar' && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 24 }}>
-              <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
+              <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
-                  <h2 style={{ fontFamily: 'var(--serif)', fontSize: 22, fontWeight: 400 }}>
-                    {monthNames[calendarDate.getMonth()]} {calendarDate.getFullYear()}
-                  </h2>
+                  <div style={{ fontSize: 18, fontWeight: 600 }}>{monthNames[calendarDate.getMonth()]} {calendarDate.getFullYear()}</div>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() - 1))} style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid var(--border2)', background: 'transparent', color: 'var(--fg)', cursor: 'pointer', fontSize: 14 }}>‹</button>
-                    <button onClick={() => setCalendarDate(new Date())} style={{ padding: '0 12px', height: 32, borderRadius: 8, border: '1px solid var(--border2)', background: 'transparent', color: 'var(--fg)', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 11 }}>Today</button>
-                    <button onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1))} style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid var(--border2)', background: 'transparent', color: 'var(--fg)', cursor: 'pointer', fontSize: 14 }}>›</button>
+                    <button onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() - 1))} className="btn btn-ghost btn-sm">‹</button>
+                    <button onClick={() => setCalendarDate(new Date())} className="btn btn-outline btn-sm">Today</button>
+                    <button onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1))} className="btn btn-ghost btn-sm">›</button>
                   </div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '1px solid var(--border)' }}>
                   {dayNames.map(d => (
-                    <div key={d} style={{ padding: '10px 0', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--muted)', letterSpacing: 1 }}>{d}</div>
+                    <div key={d} style={{ padding: '10px 0', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--fg3)', letterSpacing: 1 }}>{d}</div>
                   ))}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
                   {Array.from({ length: getFirstDayOfMonth(calendarDate) }).map((_, i) => (
-                    <div key={`empty-${i}`} style={{ minHeight: 88, borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)', padding: 8, background: 'var(--bg3)', opacity: 0.4 }} />
+                    <div key={`empty-${i}`} style={{ minHeight: 88, borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)', background: 'var(--bg3)', opacity: 0.4 }} />
                   ))}
                   {Array.from({ length: getDaysInMonth(calendarDate) }).map((_, i) => {
                     const day = i + 1
@@ -311,7 +583,7 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
                               {event.title}
                             </div>
                           ))}
-                          {events.length > 2 && <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--muted)', paddingLeft: 2 }}>+{events.length - 2} more</div>}
+                          {events.length > 2 && <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--fg3)', paddingLeft: 2 }}>+{events.length - 2} more</div>}
                         </div>
                       </div>
                     )
@@ -320,29 +592,27 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 20 }}>
-                  <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 16 }}>Upcoming</div>
+                <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
+                  <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Upcoming</div>
                   {upcomingEvents.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '24px 0' }}>
-                      <p style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>No upcoming events</p>
-                      <button onClick={() => setView('chat')} style={{ fontFamily: 'var(--mono)', fontSize: 11, padding: '6px 12px', background: 'transparent', border: '1px solid var(--border2)', borderRadius: 8, color: 'var(--muted)', cursor: 'pointer' }}>
-                        + Add via chat
-                      </button>
+                      <p style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--fg3)', marginBottom: 12 }}>No upcoming events</p>
+                      <button onClick={() => setView('chat')} className="btn btn-outline btn-sm">+ Add via chat</button>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {upcomingEvents.map(event => (
-                        <div key={event.id} style={{ padding: '12px 14px', background: 'var(--bg3)', borderRadius: 10, border: '1px solid var(--border)', borderLeft: `3px solid ${EVENT_COLORS[event.event_type] || '#6b7280'}` }}>
+                        <div key={event.id} style={{ padding: '12px 14px', background: 'var(--bg3)', borderRadius: 8, border: '1px solid var(--border)', borderLeft: `3px solid ${EVENT_COLORS[event.event_type] || '#6b7280'}` }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
                             <div style={{ fontSize: 13, fontWeight: 500, flex: 1 }}>{event.title}</div>
-                            <button onClick={() => deleteEvent(event.id)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 11, padding: '0 0 0 8px', flexShrink: 0 }}>✕</button>
+                            <button onClick={() => deleteEvent(event.id)} style={{ background: 'none', border: 'none', color: 'var(--fg3)', cursor: 'pointer', fontSize: 11, padding: '0 0 0 8px', flexShrink: 0 }}>✕</button>
                           </div>
-                          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--muted)', marginBottom: 4 }}>
+                          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--fg3)', marginBottom: 4 }}>
                             {new Date(event.event_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                             {event.event_time && ` · ${formatEventTime(event.event_time)}`}
                           </div>
-                          {event.location && <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 2 }}>📍 {event.location}</div>}
-                          {event.description && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{event.description}</div>}
+                          {event.location && <div style={{ fontSize: 11, color: 'var(--fg3)', marginBottom: 2 }}>📍 {event.location}</div>}
+                          {event.description && <div style={{ fontSize: 11, color: 'var(--fg3)' }}>{event.description}</div>}
                           <div style={{ marginTop: 6 }}>
                             <span style={{ fontFamily: 'var(--mono)', fontSize: 9, padding: '2px 6px', borderRadius: 4, background: `${EVENT_COLORS[event.event_type] || '#6b7280'}22`, color: EVENT_COLORS[event.event_type] || '#6b7280' }}>
                               {event.event_type}
@@ -353,187 +623,18 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
                     </div>
                   )}
                 </div>
-                <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 20 }}>
-                  <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>Add event via AI</div>
-                  <p style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.6, marginBottom: 12 }}>
-                    Tell your agent about any meeting or appointment in the chat — it adds it automatically.
+                <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
+                  <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 8 }}>Add via AI</div>
+                  <p style={{ fontSize: 13, color: 'var(--fg3)', lineHeight: 1.6, marginBottom: 12 }}>
+                    Tell your agent about any meeting or appointment in the chat.
                   </p>
-                  <button onClick={() => setView('chat')} className="btn btn-accent" style={{ width: '100%', fontSize: 12, padding: '10px' }}>Open chat →</button>
+                  <button onClick={() => setView('chat')} className="btn btn-accent" style={{ width: '100%', fontSize: 13 }}>Open chat →</button>
                 </div>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* HOME VIEW */}
-        {view === 'home' && (
-          <div>
-            <div style={{ background: 'var(--fg)', color: 'var(--bg)', borderRadius: 16, padding: '28px 32px', marginBottom: 28, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
-              <div>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, opacity: 0.5, marginBottom: 8, letterSpacing: 1 }}>YOUR AI BUSINESS ASSISTANT</div>
-                <h2 style={{ fontFamily: 'var(--serif)', fontSize: 28, fontWeight: 400, marginBottom: 6 }}>What do you need done today?</h2>
-                <p style={{ fontSize: 14, opacity: 0.6, maxWidth: 400 }}>Pick an action below or chat directly. No technical knowledge needed.</p>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <button onClick={() => startAction(QUICK_ACTIONS[11])} className="btn btn-accent" style={{ fontSize: 13, padding: '12px 24px' }}>Start chatting →</button>
-                <button onClick={() => router.push(`/agent/${agent.id as string}/manage`)} className="btn btn-outline" style={{ fontSize: 12, padding: '10px 24px', color: 'var(--bg)', borderColor: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                  {IconManage} Manage agent
-                </button>
-              </div>
-            </div>
-
-            {upcomingEvents.length > 0 && (
-              <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 20px', marginBottom: 24 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', letterSpacing: 1.5, textTransform: 'uppercase' }}>Upcoming events</div>
-                  <button onClick={() => setView('calendar')} style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer' }}>View calendar →</button>
-                </div>
-                <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
-                  {upcomingEvents.map(event => (
-                    <div key={event.id} style={{ flexShrink: 0, padding: '10px 14px', background: 'var(--bg3)', borderRadius: 10, border: '1px solid var(--border)', borderLeft: `3px solid ${EVENT_COLORS[event.event_type] || '#6b7280'}`, minWidth: 160 }}>
-                      <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 4 }}>{event.title}</div>
-                      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--muted)' }}>
-                        {new Date(event.event_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        {event.event_time && ` · ${formatEventTime(event.event_time)}`}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div style={{ marginBottom: 28 }}>
-              <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 16 }}>Quick actions</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
-                {QUICK_ACTIONS.map((action, i) => (
-                  <button key={i} onClick={() => startAction(action)}
-                    style={{ textAlign: 'left', padding: '16px 18px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, cursor: 'pointer', transition: 'all 0.15s' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--fg)'; (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)' }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)' }}>
-                    <div style={{ color: 'var(--muted)', marginBottom: 10 }}>{action.icon}</div>
-                    <div style={{ fontFamily: 'var(--sans)', fontSize: 13, fontWeight: 500, color: 'var(--fg)' }}>{action.label}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {recentRuns.length > 0 && (
-              <div>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 16 }}>Recent activity</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {recentRuns.map((run, i) => (
-                    <div key={i} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
-                      onClick={() => { setView('chat'); setMessages([{ role: 'user', content: run.input as string, timestamp: run.created_at as string }, { role: 'assistant', content: run.output as string, timestamp: run.created_at as string }]) }}>
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 2 }}>{(run.input as string)?.slice(0, 60)}{(run.input as string)?.length > 60 ? '...' : ''}</div>
-                        <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)' }}>{run.automation_type as string}</div>
-                      </div>
-                      <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', flexShrink: 0, marginLeft: 16 }}>{timeAgo(run.created_at as string)}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* CHAT VIEW */}
-        {view === 'chat' && (
-          <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 200px)' }}>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-              {QUICK_ACTIONS.slice(0, 6).map((action, i) => (
-                <button key={i} onClick={() => startAction(action)}
-                  style={{ fontFamily: 'var(--mono)', fontSize: 11, padding: '6px 12px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 20, cursor: 'pointer', color: 'var(--muted)', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 6 }}
-                  onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.color = 'var(--fg)'}
-                  onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.color = 'var(--muted)'}>
-                  {action.icon} {action.label}
-                </button>
-              ))}
-            </div>
-
-            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 16 }}>
-              {messages.map((msg, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
-                  <div style={{ maxWidth: '80%', background: msg.role === 'user' ? 'var(--fg)' : 'var(--bg2)', color: msg.role === 'user' ? 'var(--bg)' : 'var(--fg)', border: `1px solid ${msg.role === 'user' ? 'var(--fg)' : 'var(--border)'}`, borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px', padding: '14px 18px' }}>
-                    {msg.role === 'assistant' && (
-                      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)', marginBottom: 8, letterSpacing: 1 }}>{agent.agent_name as string}</div>
-                    )}
-                    <div style={{ fontSize: 14, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{msg.content}</div>
-
-                    {msg.emailSent && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--mono)', fontSize: 11, color: '#4ade80', marginTop: 10, padding: '6px 10px', background: '#0d2e14', borderRadius: 6, border: '1px solid #1a4a24', width: 'fit-content' }}>
-                        {IconCheck} Email sent
-                      </div>
-                    )}
-
-                    {msg.calendarEvent && (
-                      <div style={{ marginTop: 10, padding: '10px 14px', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ color: '#3b82f6', flexShrink: 0 }}>{IconEvent}</div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: '#3b82f6', marginBottom: 2 }}>Added to calendar</div>
-                          <div style={{ fontSize: 12, fontWeight: 500 }}>{(msg.calendarEvent as Record<string, unknown>).title as string}</div>
-                          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--muted)' }}>
-                            {new Date((msg.calendarEvent as Record<string, unknown>).event_date as string + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                            {(msg.calendarEvent as Record<string, unknown>).event_time && ` · ${formatEventTime((msg.calendarEvent as Record<string, unknown>).event_time as string)}`}
-                          </div>
-                        </div>
-                        <button onClick={() => setView('calendar')} style={{ fontFamily: 'var(--mono)', fontSize: 10, padding: '4px 8px', background: 'rgba(59,130,246,0.2)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 6, color: '#3b82f6', cursor: 'pointer', flexShrink: 0 }}>
-                          View →
-                        </button>
-                      </div>
-                    )}
-
-                    {msg.documentId && (
-                      <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        <button onClick={() => viewDocument(msg.documentId!, msg.documentType!, msg.invoiceHTML)}
-                          style={{ fontFamily: 'var(--mono)', fontSize: 11, padding: '7px 14px', background: 'var(--fg)', color: 'var(--bg)', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                          {IconView} View {msg.documentType}
-                        </button>
-                        <button onClick={() => { const win = window.open('', '_blank'); if (win && msg.invoiceHTML) { win.document.write(msg.invoiceHTML); win.document.close(); win.print() } }}
-                          style={{ fontFamily: 'var(--mono)', fontSize: 11, padding: '7px 14px', background: '#c8f135', color: '#0a0a0a', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                          {IconPrint} Print / PDF
-                        </button>
-                      </div>
-                    )}
-
-                    <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--muted)', marginTop: 8, opacity: 0.5 }}>
-                      {new Date(msg.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              {running && (
-                <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-                  <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '16px 16px 16px 4px', padding: '14px 18px' }}>
-                    <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)', marginBottom: 8, letterSpacing: 1 }}>{agent.agent_name as string}</div>
-                    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                      {[0, 1, 2].map(i => (
-                        <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--muted)', animation: `pulse 1.4s ease-in-out ${i * 0.2}s infinite` }} />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div ref={bottomRef} />
-            </div>
-
-            <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: '12px 16px', display: 'flex', gap: 10, alignItems: 'flex-end' }}>
-              <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown}
-                placeholder={`Tell ${agent.agent_name as string} what to do...`}
-                rows={2}
-                style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--sans)', fontSize: 14, color: 'var(--fg)', resize: 'none', lineHeight: 1.6 }} />
-              <button onClick={sendMessage} disabled={running || !input.trim()} className="btn btn-accent"
-                style={{ fontSize: 12, padding: '8px 18px', flexShrink: 0, opacity: (running || !input.trim()) ? 0.5 : 1 }}>
-                Send →
-              </button>
-            </div>
-            <p style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', textAlign: 'center', marginTop: 8 }}>
-              Press Enter to send · Shift+Enter for new line
-            </p>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      </main>
 
       <style>{`
         @keyframes pulse {
@@ -541,6 +642,6 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
           30% { opacity: 1; transform: scale(1.2); }
         }
       `}</style>
-    </>
+    </div>
   )
 }
