@@ -12,6 +12,19 @@ interface Message {
   documentId?: string
   documentType?: string
   invoiceHTML?: string
+  calendarEvent?: Record<string, unknown>
+}
+
+interface CalendarEvent {
+  id: string
+  title: string
+  event_date: string
+  event_time?: string
+  event_type: string
+  location?: string
+  description?: string
+  attendees?: string[]
+  status: string
 }
 
 const QUICK_ACTIONS = [
@@ -29,18 +42,29 @@ const QUICK_ACTIONS = [
   { icon: '⚡', label: 'Custom task', prompt: '' },
 ]
 
+const EVENT_COLORS: Record<string, string> = {
+  meeting: '#3b82f6',
+  appointment: '#8b5cf6',
+  call: '#10b981',
+  deadline: '#ef4444',
+  event: '#f59e0b',
+  reminder: '#6b7280',
+}
+
 export default function AgentClient({ agent }: { agent: Record<string, unknown> }) {
   const router = useRouter()
-  const [view, setView] = useState<'home' | 'chat'>('home')
+  const [view, setView] = useState<'home' | 'chat' | 'calendar'>('home')
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [running, setRunning] = useState(false)
   const [recentRuns, setRecentRuns] = useState<Record<string, unknown>[]>([])
   const [previewDoc, setPreviewDoc] = useState<{ html: string; type: string } | null>(null)
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([])
+  const [calendarDate, setCalendarDate] = useState(new Date())
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  useEffect(() => { loadRecentRuns() }, [])
+  useEffect(() => { loadRecentRuns(); loadCalendarEvents() }, [])
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
   const loadRecentRuns = async () => {
@@ -51,6 +75,15 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
       .order('created_at', { ascending: false })
       .limit(5)
     setRecentRuns(data || [])
+  }
+
+  const loadCalendarEvents = async () => {
+    const { data } = await supabase
+      .from('calendar_events')
+      .select('*')
+      .eq('business_agent_id', agent.id as string)
+      .order('event_date', { ascending: true })
+    setCalendarEvents(data || [])
   }
 
   const startAction = (action: typeof QUICK_ACTIONS[0]) => {
@@ -96,8 +129,13 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
         documentId: data.documentId,
         documentType: data.documentType,
         invoiceHTML: data.invoiceHTML,
+        calendarEvent: data.calendarEvent,
       }
       setMessages(prev => [...prev, assistantMessage])
+
+      // Refresh calendar if event was added
+      if (data.calendarEvent) loadCalendarEvents()
+
       await supabase.from('automation_runs').insert({
         business_agent_id: agent.id as string,
         automation_type: 'chat',
@@ -128,10 +166,7 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
   }
 
   const viewDocument = async (documentId: string, documentType: string, inlineHTML?: string) => {
-    if (inlineHTML) {
-      setPreviewDoc({ html: inlineHTML, type: documentType })
-      return
-    }
+    if (inlineHTML) { setPreviewDoc({ html: inlineHTML, type: documentType }); return }
     const { data } = await supabase.from('documents').select('*').eq('id', documentId).single()
     if (data) {
       const html = (data.metadata as Record<string, unknown>)?.invoiceHTML as string || data.content as string
@@ -139,48 +174,48 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
     }
   }
 
+  const deleteEvent = async (id: string) => {
+    await supabase.from('calendar_events').delete().eq('id', id)
+    setCalendarEvents(prev => prev.filter(e => e.id !== id))
+  }
+
+  // Calendar helpers
+  const getDaysInMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
+  const getFirstDayOfMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth(), 1).getDay()
+  const getEventsForDay = (day: number) => {
+    const dateStr = `${calendarDate.getFullYear()}-${String(calendarDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    return calendarEvents.filter(e => e.event_date === dateStr)
+  }
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  const today = new Date()
+
+  const formatEventTime = (time?: string) => {
+    if (!time) return ''
+    const [h, m] = time.split(':')
+    const hour = parseInt(h)
+    return `${hour > 12 ? hour - 12 : hour}:${m} ${hour >= 12 ? 'PM' : 'AM'}`
+  }
+
+  const upcomingEvents = calendarEvents.filter(e => e.event_date >= today.toISOString().split('T')[0]).slice(0, 5)
+
   return (
     <>
       <Navbar />
 
       {/* Document preview modal */}
       {previewDoc && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)',
-          zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20
-        }}>
-          <div style={{
-            background: 'var(--bg)', border: '1px solid var(--border)',
-            borderRadius: 16, width: '100%', maxWidth: 740,
-            maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column'
-          }}>
-            <div style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              padding: '16px 24px', borderBottom: '1px solid var(--border)', flexShrink: 0
-            }}>
-              <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--accent)' }}>
-                {previewDoc.type} PREVIEW
-              </div>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 16, width: '100%', maxWidth: 740, maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--accent)' }}>{previewDoc.type} PREVIEW</div>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  onClick={() => {
-                    const win = window.open('', '_blank')
-                    if (win) { win.document.write(previewDoc.html); win.document.close(); win.print() }
-                  }}
-                  className="btn btn-accent" style={{ fontSize: 12, padding: '7px 16px' }}>
-                  🖨 Print / Save PDF
-                </button>
-                <button onClick={() => setPreviewDoc(null)} className="btn btn-outline" style={{ fontSize: 12, padding: '7px 16px' }}>
-                  Close ✕
-                </button>
+                <button onClick={() => { const win = window.open('', '_blank'); if (win) { win.document.write(previewDoc.html); win.document.close(); win.print() } }} className="btn btn-accent" style={{ fontSize: 12, padding: '7px 16px' }}>🖨 Print / Save PDF</button>
+                <button onClick={() => setPreviewDoc(null)} className="btn btn-outline" style={{ fontSize: 12, padding: '7px 16px' }}>Close ✕</button>
               </div>
             </div>
             <div style={{ flex: 1, overflow: 'auto' }}>
-              <iframe
-                srcDoc={previewDoc.html}
-                style={{ width: '100%', height: '600px', border: 'none' }}
-                title="Document Preview"
-              />
+              <iframe srcDoc={previewDoc.html} style={{ width: '100%', height: '600px', border: 'none' }} title="Document Preview" />
             </div>
           </div>
         </div>
@@ -191,12 +226,7 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <div style={{
-              width: 52, height: 52, borderRadius: 14,
-              background: 'var(--fg)', color: 'var(--bg)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: 'var(--serif)', fontSize: 22,
-            }}>
+            <div style={{ width: 52, height: 52, borderRadius: 14, background: 'var(--fg)', color: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--serif)', fontSize: 22 }}>
               {(agent.agent_name as string)?.[0]}
             </div>
             <div>
@@ -208,28 +238,179 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              onClick={() => router.push(`/agent/${agent.id as string}/manage`)}
-              className="btn btn-outline" style={{ fontSize: 12 }}>
-              ⚙ Manage
+            <button onClick={() => router.push(`/agent/${agent.id as string}/manage`)} className="btn btn-outline" style={{ fontSize: 12 }}>⚙ Manage</button>
+            <button onClick={() => setView(view === 'calendar' ? 'home' : 'calendar')} className="btn btn-outline" style={{ fontSize: 12, background: view === 'calendar' ? 'var(--fg)' : 'transparent', color: view === 'calendar' ? 'var(--bg)' : 'var(--fg)' }}>
+              📅 Calendar {calendarEvents.length > 0 && `(${upcomingEvents.length})`}
             </button>
-            <button
-              onClick={() => setView(view === 'home' ? 'chat' : 'home')}
-              className="btn btn-outline" style={{ fontSize: 12 }}>
+            <button onClick={() => setView(view === 'home' ? 'chat' : 'home')} className="btn btn-outline" style={{ fontSize: 12 }}>
               {view === 'home' ? '💬 Open chat' : '⊞ Dashboard'}
             </button>
             <button onClick={() => router.push('/dashboard')} className="btn btn-outline" style={{ fontSize: 12 }}>← Back</button>
           </div>
         </div>
 
+        {/* CALENDAR VIEW */}
+        {view === 'calendar' && (
+          <div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 24 }}>
+
+              {/* Calendar grid */}
+              <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
+                {/* Calendar header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
+                  <h2 style={{ fontFamily: 'var(--serif)', fontSize: 22, fontWeight: 400 }}>
+                    {monthNames[calendarDate.getMonth()]} {calendarDate.getFullYear()}
+                  </h2>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() - 1))}
+                      style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid var(--border2)', background: 'transparent', color: 'var(--fg)', cursor: 'pointer', fontSize: 14 }}>
+                      ‹
+                    </button>
+                    <button
+                      onClick={() => setCalendarDate(new Date())}
+                      style={{ padding: '0 12px', height: 32, borderRadius: 8, border: '1px solid var(--border2)', background: 'transparent', color: 'var(--fg)', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 11 }}>
+                      Today
+                    </button>
+                    <button
+                      onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1))}
+                      style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid var(--border2)', background: 'transparent', color: 'var(--fg)', cursor: 'pointer', fontSize: 14 }}>
+                      ›
+                    </button>
+                  </div>
+                </div>
+
+                {/* Day names */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '1px solid var(--border)' }}>
+                  {dayNames.map(d => (
+                    <div key={d} style={{ padding: '10px 0', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--muted)', letterSpacing: 1 }}>
+                      {d}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Days grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
+                  {/* Empty cells for first day offset */}
+                  {Array.from({ length: getFirstDayOfMonth(calendarDate) }).map((_, i) => (
+                    <div key={`empty-${i}`} style={{ minHeight: 88, borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)', padding: 8, background: 'var(--bg3)', opacity: 0.4 }} />
+                  ))}
+
+                  {/* Day cells */}
+                  {Array.from({ length: getDaysInMonth(calendarDate) }).map((_, i) => {
+                    const day = i + 1
+                    const events = getEventsForDay(day)
+                    const isToday = today.getDate() === day && today.getMonth() === calendarDate.getMonth() && today.getFullYear() === calendarDate.getFullYear()
+                    const colIndex = (getFirstDayOfMonth(calendarDate) + i) % 7
+                    const isLastCol = colIndex === 6
+
+                    return (
+                      <div key={day} style={{
+                        minHeight: 88, padding: 8,
+                        borderRight: isLastCol ? 'none' : '1px solid var(--border)',
+                        borderBottom: '1px solid var(--border)',
+                        background: isToday ? 'rgba(200,241,53,0.04)' : 'transparent',
+                        transition: 'background 0.15s',
+                      }}>
+                        <div style={{
+                          width: 26, height: 26, borderRadius: 6,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontFamily: 'var(--mono)', fontSize: 12,
+                          background: isToday ? 'var(--accent)' : 'transparent',
+                          color: isToday ? '#0a0a0a' : 'var(--fg)',
+                          fontWeight: isToday ? 700 : 400,
+                          marginBottom: 4,
+                        }}>
+                          {day}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          {events.slice(0, 2).map(event => (
+                            <div key={event.id} style={{
+                              padding: '2px 6px', borderRadius: 4, fontSize: 10,
+                              background: `${EVENT_COLORS[event.event_type] || '#6b7280'}22`,
+                              color: EVENT_COLORS[event.event_type] || '#6b7280',
+                              border: `1px solid ${EVENT_COLORS[event.event_type] || '#6b7280'}44`,
+                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                              fontFamily: 'var(--mono)',
+                            }}>
+                              {event.title}
+                            </div>
+                          ))}
+                          {events.length > 2 && (
+                            <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--muted)', paddingLeft: 2 }}>
+                              +{events.length - 2} more
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Sidebar — upcoming events */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 20 }}>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 16 }}>
+                    Upcoming
+                  </div>
+                  {upcomingEvents.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                      <p style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>No upcoming events</p>
+                      <button onClick={() => { setView('chat'); startAction({ icon: '📅', label: 'Schedule event', prompt: 'Schedule a meeting for ' }) }}
+                        style={{ fontFamily: 'var(--mono)', fontSize: 11, padding: '6px 12px', background: 'transparent', border: '1px solid var(--border2)', borderRadius: 8, color: 'var(--muted)', cursor: 'pointer' }}>
+                        + Add via chat
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {upcomingEvents.map(event => (
+                        <div key={event.id} style={{ padding: '12px 14px', background: 'var(--bg3)', borderRadius: 10, border: '1px solid var(--border)', borderLeft: `3px solid ${EVENT_COLORS[event.event_type] || '#6b7280'}` }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                            <div style={{ fontSize: 13, fontWeight: 500, flex: 1 }}>{event.title}</div>
+                            <button onClick={() => deleteEvent(event.id)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 11, padding: '0 0 0 8px', flexShrink: 0 }}>✕</button>
+                          </div>
+                          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--muted)', marginBottom: event.location || event.description ? 6 : 0 }}>
+                            {new Date(event.event_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                            {event.event_time && ` · ${formatEventTime(event.event_time)}`}
+                          </div>
+                          {event.location && <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 2 }}>📍 {event.location}</div>}
+                          {event.description && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{event.description}</div>}
+                          <div style={{ marginTop: 6 }}>
+                            <span style={{ fontFamily: 'var(--mono)', fontSize: 9, padding: '2px 6px', borderRadius: 4, background: `${EVENT_COLORS[event.event_type] || '#6b7280'}22`, color: EVENT_COLORS[event.event_type] || '#6b7280' }}>
+                              {event.event_type}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Quick add via chat */}
+                <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 20 }}>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>
+                    Add event via AI
+                  </div>
+                  <p style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.6, marginBottom: 12 }}>
+                    Just tell your agent about any meeting or appointment in the chat — it will automatically add it to your calendar.
+                  </p>
+                  <button
+                    onClick={() => setView('chat')}
+                    className="btn btn-accent"
+                    style={{ width: '100%', fontSize: 12, padding: '10px' }}>
+                    Open chat →
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* HOME VIEW */}
         {view === 'home' && (
           <div>
-            <div style={{
-              background: 'var(--fg)', color: 'var(--bg)',
-              borderRadius: 16, padding: '28px 32px', marginBottom: 28,
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16,
-            }}>
+            <div style={{ background: 'var(--fg)', color: 'var(--bg)', borderRadius: 16, padding: '28px 32px', marginBottom: 28, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
               <div>
                 <div style={{ fontFamily: 'var(--mono)', fontSize: 11, opacity: 0.5, marginBottom: 8, letterSpacing: 1 }}>YOUR AI BUSINESS ASSISTANT</div>
                 <h2 style={{ fontFamily: 'var(--serif)', fontSize: 28, fontWeight: 400, marginBottom: 6 }}>What do you need done today?</h2>
@@ -239,28 +420,41 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
                 <button onClick={() => startAction(QUICK_ACTIONS[11])} className="btn btn-accent" style={{ fontSize: 13, padding: '12px 24px' }}>
                   Start chatting →
                 </button>
-                <button
-                  onClick={() => router.push(`/agent/${agent.id as string}/manage`)}
-                  className="btn btn-outline"
-                  style={{ fontSize: 12, padding: '10px 24px', color: 'var(--bg)', borderColor: 'rgba(255,255,255,0.2)' }}>
+                <button onClick={() => router.push(`/agent/${agent.id as string}/manage`)} className="btn btn-outline" style={{ fontSize: 12, padding: '10px 24px', color: 'var(--bg)', borderColor: 'rgba(255,255,255,0.2)' }}>
                   ⚙ Manage agent
                 </button>
               </div>
             </div>
+
+            {/* Upcoming events strip */}
+            {upcomingEvents.length > 0 && (
+              <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 20px', marginBottom: 24 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', letterSpacing: 1.5, textTransform: 'uppercase' }}>Upcoming events</div>
+                  <button onClick={() => setView('calendar')} style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer' }}>View calendar →</button>
+                </div>
+                <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
+                  {upcomingEvents.map(event => (
+                    <div key={event.id} style={{ flexShrink: 0, padding: '10px 14px', background: 'var(--bg3)', borderRadius: 10, border: '1px solid var(--border)', borderLeft: `3px solid ${EVENT_COLORS[event.event_type] || '#6b7280'}`, minWidth: 160 }}>
+                      <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 4 }}>{event.title}</div>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--muted)' }}>
+                        {new Date(event.event_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        {event.event_time && ` · ${formatEventTime(event.event_time)}`}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div style={{ marginBottom: 28 }}>
               <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 16 }}>Quick actions</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
                 {QUICK_ACTIONS.map((action, i) => (
                   <button key={i} onClick={() => startAction(action)}
-                    style={{
-                      textAlign: 'left', padding: '16px 18px',
-                      background: 'var(--bg2)', border: '1px solid var(--border)',
-                      borderRadius: 12, cursor: 'pointer', transition: 'all 0.15s',
-                    }}
+                    style={{ textAlign: 'left', padding: '16px 18px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, cursor: 'pointer', transition: 'all 0.15s' }}
                     onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--fg)'; (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)' }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)' }}
-                  >
+                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)' }}>
                     <div style={{ fontSize: 24, marginBottom: 8 }}>{action.icon}</div>
                     <div style={{ fontFamily: 'var(--sans)', fontSize: 13, fontWeight: 500, color: 'var(--fg)' }}>{action.label}</div>
                   </button>
@@ -275,14 +469,7 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
                   {recentRuns.map((run, i) => (
                     <div key={i}
                       style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
-                      onClick={() => {
-                        setView('chat')
-                        setMessages([
-                          { role: 'user', content: run.input as string, timestamp: run.created_at as string },
-                          { role: 'assistant', content: run.output as string, timestamp: run.created_at as string },
-                        ])
-                      }}
-                    >
+                      onClick={() => { setView('chat'); setMessages([{ role: 'user', content: run.input as string, timestamp: run.created_at as string }, { role: 'assistant', content: run.output as string, timestamp: run.created_at as string }]) }}>
                       <div>
                         <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 2 }}>{(run.input as string)?.slice(0, 60)}{(run.input as string)?.length > 60 ? '...' : ''}</div>
                         <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)' }}>{run.automation_type as string}</div>
@@ -299,14 +486,12 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
         {/* CHAT VIEW */}
         {view === 'chat' && (
           <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 200px)' }}>
-
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
               {QUICK_ACTIONS.slice(0, 6).map((action, i) => (
                 <button key={i} onClick={() => startAction(action)}
                   style={{ fontFamily: 'var(--mono)', fontSize: 11, padding: '6px 12px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 20, cursor: 'pointer', color: 'var(--muted)', transition: 'all 0.15s' }}
                   onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.color = 'var(--fg)'}
-                  onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.color = 'var(--muted)'}
-                >
+                  onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.color = 'var(--muted)'}>
                   {action.icon} {action.label}
                 </button>
               ))}
@@ -324,9 +509,7 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
                     padding: '14px 18px',
                   }}>
                     {msg.role === 'assistant' && (
-                      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)', marginBottom: 8, letterSpacing: 1 }}>
-                        {agent.agent_name as string}
-                      </div>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)', marginBottom: 8, letterSpacing: 1 }}>{agent.agent_name as string}</div>
                     )}
                     <div style={{ fontSize: 14, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{msg.content}</div>
 
@@ -336,27 +519,31 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
                       </div>
                     )}
 
+                    {msg.calendarEvent && (
+                      <div style={{ marginTop: 10, padding: '10px 14px', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ fontSize: 16 }}>📅</div>
+                        <div>
+                          <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: '#3b82f6', marginBottom: 2 }}>Added to calendar</div>
+                          <div style={{ fontSize: 12, fontWeight: 500 }}>{(msg.calendarEvent as Record<string, unknown>).title as string}</div>
+                          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--muted)' }}>
+                            {new Date((msg.calendarEvent as Record<string, unknown>).event_date as string + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                            {(msg.calendarEvent as Record<string, unknown>).event_time && ` · ${formatEventTime((msg.calendarEvent as Record<string, unknown>).event_time as string)}`}
+                          </div>
+                        </div>
+                        <button onClick={() => setView('calendar')} style={{ marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: 10, padding: '4px 8px', background: 'rgba(59,130,246,0.2)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 6, color: '#3b82f6', cursor: 'pointer' }}>
+                          View →
+                        </button>
+                      </div>
+                    )}
+
                     {msg.documentId && (
                       <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        <button
-                          onClick={() => viewDocument(msg.documentId!, msg.documentType!, msg.invoiceHTML)}
-                          style={{
-                            fontFamily: 'var(--mono)', fontSize: 11, padding: '7px 14px',
-                            background: 'var(--fg)', color: 'var(--bg)',
-                            border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600,
-                          }}>
+                        <button onClick={() => viewDocument(msg.documentId!, msg.documentType!, msg.invoiceHTML)}
+                          style={{ fontFamily: 'var(--mono)', fontSize: 11, padding: '7px 14px', background: 'var(--fg)', color: 'var(--bg)', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>
                           👁 View {msg.documentType}
                         </button>
-                        <button
-                          onClick={() => {
-                            const win = window.open('', '_blank')
-                            if (win && msg.invoiceHTML) { win.document.write(msg.invoiceHTML); win.document.close(); win.print() }
-                          }}
-                          style={{
-                            fontFamily: 'var(--mono)', fontSize: 11, padding: '7px 14px',
-                            background: '#c8f135', color: '#0a0a0a',
-                            border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600,
-                          }}>
+                        <button onClick={() => { const win = window.open('', '_blank'); if (win && msg.invoiceHTML) { win.document.write(msg.invoiceHTML); win.document.close(); win.print() } }}
+                          style={{ fontFamily: 'var(--mono)', fontSize: 11, padding: '7px 14px', background: '#c8f135', color: '#0a0a0a', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>
                           🖨 Print / PDF
                         </button>
                       </div>
@@ -385,15 +572,10 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
             </div>
 
             <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: '12px 16px', display: 'flex', gap: 10, alignItems: 'flex-end' }}>
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={`Tell ${agent.agent_name as string} what to do...`}
+              <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown}
+                placeholder={`Tell ${agent.agent_name as string} what to do... e.g. "Schedule a meeting with John on Friday at 3pm"`}
                 rows={2}
-                style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--sans)', fontSize: 14, color: 'var(--fg)', resize: 'none', lineHeight: 1.6 }}
-              />
+                style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--sans)', fontSize: 14, color: 'var(--fg)', resize: 'none', lineHeight: 1.6 }} />
               <button onClick={sendMessage} disabled={running || !input.trim()} className="btn btn-accent"
                 style={{ fontSize: 12, padding: '8px 18px', flexShrink: 0, opacity: (running || !input.trim()) ? 0.5 : 1 }}>
                 Send →

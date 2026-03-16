@@ -16,11 +16,11 @@ export async function POST(req: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     )
 
-    // Load memory, knowledge base and contacts in parallel
-    const [{ data: memories }, { data: knowledge }, { data: contacts }] = await Promise.all([
+    const [{ data: memories }, { data: knowledge }, { data: contacts }, { data: upcomingEvents }] = await Promise.all([
       supabase.from('agent_memory').select('*').eq('business_agent_id', agent.id).order('updated_at', { ascending: false }),
       supabase.from('knowledge_base').select('*').eq('business_agent_id', agent.id),
       supabase.from('contacts').select('*').eq('business_agent_id', agent.id),
+      supabase.from('calendar_events').select('*').eq('business_agent_id', agent.id).gte('event_date', today.toISOString().split('T')[0]).order('event_date', { ascending: true }).limit(10),
     ])
 
     const memoryContext = memories?.length ? `
@@ -34,6 +34,10 @@ ${knowledge.map((k: Record<string, unknown>) => `[${k.type}] ${k.title}: ${k.con
     const contactsContext = contacts?.length ? `
 KNOWN CUSTOMERS & CONTACTS:
 ${contacts.map((c: Record<string, unknown>) => `- ${c.name}${c.email ? ` (${c.email})` : ''}${c.company ? ` at ${c.company}` : ''}${c.notes ? ` — ${c.notes}` : ''}`).join('\n')}` : ''
+
+    const calendarContext = upcomingEvents?.length ? `
+UPCOMING CALENDAR EVENTS:
+${upcomingEvents.map((e: Record<string, unknown>) => `- ${e.event_date} ${e.event_time || ''}: ${e.title}${e.location ? ` at ${e.location}` : ''}${e.description ? ` — ${e.description}` : ''}`).join('\n')}` : ''
 
     const buildDocumentHTML = (type: string, content: string, metadata: Record<string, unknown>) => {
       const docNumber = `DOC-${Date.now().toString().slice(-6)}`
@@ -142,27 +146,38 @@ DUE DATE (invoices): ${formatDate(dueDate)}
 ${memoryContext}
 ${knowledgeContext}
 ${contactsContext}
+${calendarContext}
 
 MEMORY INSTRUCTIONS:
-When you learn new important information about the business, customers, pricing, or preferences, save it by adding at the end:
+When you learn important information, save it:
 [REMEMBER:category:key:value]
 Categories: customer, pricing, product, preference, general
-Example: [REMEMBER:customer:John Smith email:john@example.com]
-Example: [REMEMBER:pricing:standard hourly rate:$150]
-Example: [REMEMBER:preference:invoice payment terms:Net 14]
 
 CONTACT INSTRUCTIONS:
-When you encounter a new customer, save them:
+When you encounter a new customer:
 [ADD_CONTACT:name:email:company:notes]
-Example: [ADD_CONTACT:John Smith:john@example.com:ABC Corp:Prefers email contact]
+
+CALENDAR INSTRUCTIONS:
+When the user mentions a meeting, appointment, event, deadline, call, or any scheduled activity, ALWAYS add it to the calendar:
+[ADD_EVENT:title:date:time:type:location:description:attendees]
+- date format: YYYY-MM-DD
+- time format: HH:MM (24hr) or leave blank
+- type: meeting, appointment, call, deadline, event, reminder
+- attendees: comma separated names or leave blank
+- Always confirm you added it to the calendar
+
+Examples:
+User: "I have a meeting with John on March 20 at 2pm"
+→ Add to response: [ADD_EVENT:Meeting with John:2026-03-20:14:00:meeting::Discussion with John:John]
+
+User: "Schedule a client call for tomorrow at 10am"
+→ Add to response: [ADD_EVENT:Client Call:${new Date(today.getTime() + 86400000).toISOString().split('T')[0]}:10:00:call:::] 
 
 RULES:
-- Be brief and professional. No ** markdown.
-- Use plain text only in document content
-- Use # for section headings
-- Use - for bullet points
-- Always use memory when available — never ask for info you already know
-- Confirm task in ONE line at the end
+- Be brief and professional
+- No markdown bold (**)
+- Use # for headings, - for bullets
+- Always confirm in one line what you did
 
 INVOICE FORMAT:
 INVOICE #[NUMBER]
@@ -173,48 +188,12 @@ Tax (10%): $[amount]
 Total Due: $[amount]
 [SEND_INVOICE:email:invoiceNumber:clientName:subtotal:tax:total:desc|qty|rate|amount]
 
-CONTRACT FORMAT:
-# Parties
-# Services  
-# Terms
-# Payment
-# Termination
-# Signatures
-[CREATE_DOCUMENT:CONTRACT:title|party1|party2]
-
-PROPOSAL FORMAT:
-# Executive Summary
-# Scope of Work
-# Timeline
-# Investment
-# Next Steps
-[CREATE_DOCUMENT:PROPOSAL:title|clientName|date]
-
-REPORT FORMAT:
-# Overview
-# Key Metrics
-# Highlights
-# Challenges
-# Recommendations
-[CREATE_DOCUMENT:REPORT:title|period|date]
-
-MEETING AGENDA FORMAT:
-# Meeting Details
-# Attendees
-# Agenda Items
-# Action Items
-[CREATE_DOCUMENT:MEETING AGENDA:title|organizer|date]
-
-JOB LISTING FORMAT:
-# About the Role
-# Responsibilities
-# Requirements
-# What We Offer
-# How to Apply
-[CREATE_DOCUMENT:JOB LISTING:title|company|date]
-
-EMAIL FORMAT:
-Max 5 lines. Then: [SEND_EMAIL:email:subject]`
+CONTRACT: [CREATE_DOCUMENT:CONTRACT:title|party1|party2]
+PROPOSAL: [CREATE_DOCUMENT:PROPOSAL:title|clientName|date]
+REPORT: [CREATE_DOCUMENT:REPORT:title|period|date]
+MEETING AGENDA: [CREATE_DOCUMENT:MEETING AGENDA:title|organizer|date]
+JOB LISTING: [CREATE_DOCUMENT:JOB LISTING:title|company|date]
+EMAIL: [SEND_EMAIL:email:subject]`
 
     const conversationHistory = history.slice(-10).map((msg: { role: string; content: string }) => ({
       role: msg.role,
@@ -242,36 +221,52 @@ Max 5 lines. Then: [SEND_EMAIL:email:subject]`
     let documentId = null
     let documentType = null
     let invoiceHTML = null
+    let calendarEvent = null
 
     // Save memories
     const memoryMatches = [...reply.matchAll(/\[REMEMBER:([^:]+):([^:]+):([^\]]+)\]/g)]
-    if (memoryMatches.length > 0) {
-      for (const match of memoryMatches) {
-        await supabase.from('agent_memory').upsert({
-          business_agent_id: agent.id,
-          category: match[1].trim(),
-          key: match[2].trim(),
-          value: match[3].trim(),
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'business_agent_id,key' })
-      }
-      reply = reply.replace(/\[REMEMBER:[^\]]+\]/g, '').trim()
+    for (const match of memoryMatches) {
+      await supabase.from('agent_memory').upsert({
+        business_agent_id: agent.id,
+        category: match[1].trim(),
+        key: match[2].trim(),
+        value: match[3].trim(),
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'business_agent_id,key' })
     }
+    reply = reply.replace(/\[REMEMBER:[^\]]+\]/g, '').trim()
 
-    // Save new contacts
+    // Save contacts
     const contactMatches = [...reply.matchAll(/\[ADD_CONTACT:([^:]+):([^:]*):([^:]*):([^\]]*)\]/g)]
-    if (contactMatches.length > 0) {
-      for (const match of contactMatches) {
-        await supabase.from('contacts').insert({
-          business_agent_id: agent.id,
-          name: match[1].trim(),
-          email: match[2].trim(),
-          company: match[3].trim(),
-          notes: match[4].trim(),
-        })
-      }
-      reply = reply.replace(/\[ADD_CONTACT:[^\]]+\]/g, '').trim()
+    for (const match of contactMatches) {
+      await supabase.from('contacts').insert({
+        business_agent_id: agent.id,
+        name: match[1].trim(),
+        email: match[2].trim(),
+        company: match[3].trim(),
+        notes: match[4].trim(),
+      })
     }
+    reply = reply.replace(/\[ADD_CONTACT:[^\]]+\]/g, '').trim()
+
+    // Save calendar events
+    const eventMatches = [...reply.matchAll(/\[ADD_EVENT:([^:]*):([^:]*):([^:]*):([^:]*):([^:]*):([^:]*):([^\]]*)\]/g)]
+    for (const match of eventMatches) {
+      const eventData = {
+        business_agent_id: agent.id,
+        title: match[1].trim(),
+        event_date: match[2].trim(),
+        event_time: match[3].trim() || null,
+        event_type: match[4].trim() || 'meeting',
+        location: match[5].trim() || null,
+        description: match[6].trim() || null,
+        attendees: match[7].trim() ? match[7].trim().split(',').map(a => a.trim()) : [],
+        status: 'upcoming',
+      }
+      const { data: evt } = await supabase.from('calendar_events').insert(eventData).select().single()
+      if (evt) calendarEvent = evt
+    }
+    reply = reply.replace(/\[ADD_EVENT:[^\]]+\]/g, '').trim()
 
     // Handle invoice
     const invoiceMatch = reply.match(/\[SEND_INVOICE:([^\]]+)\]/)
@@ -502,7 +497,7 @@ Max 5 lines. Then: [SEND_EMAIL:email:subject]`
       } catch { }
     }
 
-    return NextResponse.json({ reply, emailSent, documentId, documentType, invoiceHTML })
+    return NextResponse.json({ reply, emailSent, documentId, documentType, invoiceHTML, calendarEvent })
 
   } catch (err) {
     console.error('Agent chat error:', err)
