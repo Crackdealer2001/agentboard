@@ -1,19 +1,28 @@
 'use client'
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import Navbar from '@/components/Navbar'
+import Sidebar from '@/components/Sidebar'
 import { useRouter } from 'next/navigation'
 
-const AUTOMATION_TEMPLATES = [
-  { name: 'Weekly Business Summary', description: 'Get a summary of your business activity every Monday', prompt: 'Generate a comprehensive weekly business summary. Include: key activities this week, any patterns you notice, recommendations for next week, and action items. Keep it concise and actionable.', schedule: 'weekly', schedule_day: 'monday', schedule_time: '09:00' },
-  { name: 'Daily Calendar Briefing', description: 'Start each day knowing what\'s ahead', prompt: 'Generate a daily briefing for today. Include: upcoming calendar events today, any deadlines, recommended priorities, and a motivational note. Be brief and practical.', schedule: 'daily', schedule_day: '', schedule_time: '08:00' },
-  { name: 'Friday Invoice Reminder', description: 'Check for unpaid invoices every Friday', prompt: 'Review outstanding invoices and generate reminder messages for any that are overdue or due soon. List each unpaid invoice, days overdue, and a professional reminder message to send to each client.', schedule: 'weekly', schedule_day: 'friday', schedule_time: '10:00' },
-  { name: 'Monthly Business Report', description: 'Full monthly performance report on the 1st', prompt: 'Generate a comprehensive monthly business report. Include: month overview, key achievements, challenges faced, financial summary if available, client activity, and goals for next month. Format professionally.', schedule: 'monthly', schedule_day: '1', schedule_time: '09:00' },
-  { name: 'Weekly Social Media Plan', description: 'Get content ideas every Sunday evening', prompt: 'Generate a weekly social media content plan for the coming week. Create 5 post ideas with captions, suggested posting times, and hashtags relevant to our business. Make content engaging and on-brand.', schedule: 'weekly', schedule_day: 'sunday', schedule_time: '18:00' },
-  { name: 'Custom Automation', description: 'Build your own automated task', prompt: '', schedule: 'daily', schedule_day: '', schedule_time: '09:00' },
+const SCHEDULE_PRESETS = [
+  { label: 'Every day', schedule: 'daily', day: '', time: '09:00' },
+  { label: 'Every Monday', schedule: 'weekly', day: 'monday', time: '09:00' },
+  { label: 'Every Friday', schedule: 'weekly', day: 'friday', time: '09:00' },
+  { label: 'Every Sunday', schedule: 'weekly', day: 'sunday', time: '18:00' },
+  { label: 'Monthly on 1st', schedule: 'monthly', day: '1', time: '09:00' },
+  { label: 'Custom', schedule: 'daily', day: '', time: '09:00' },
 ]
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+
+const EXAMPLES = [
+  'Send me a summary of this week\'s activity every Monday morning',
+  'Check my calendar and brief me on today\'s schedule every day at 8am',
+  'Generate a social media post idea every Sunday evening',
+  'Send invoice reminders to unpaid clients every Friday',
+  'Create a monthly business performance report on the 1st',
+  'Email my top 3 priorities for the week every Monday',
+]
 
 export default function AutomationsClient({ agent, automations, results }: {
   agent: Record<string, unknown>
@@ -24,17 +33,18 @@ export default function AutomationsClient({ agent, automations, results }: {
   const [autos, setAutos] = useState(automations)
   const [res, setRes] = useState(results)
   const [showNew, setShowNew] = useState(false)
-  const [selectedTemplate, setSelectedTemplate] = useState<typeof AUTOMATION_TEMPLATES[0] | null>(null)
   const [saving, setSaving] = useState(false)
   const [running, setRunning] = useState<string | null>(null)
   const [runResult, setRunResult] = useState<{ id: string; result: string } | null>(null)
   const [msg, setMsg] = useState('')
+  const [selectedPreset, setSelectedPreset] = useState(0)
+  const [customSchedule, setCustomSchedule] = useState(false)
+
   const [form, setForm] = useState({
     name: '',
-    description: '',
     prompt: '',
     schedule: 'daily',
-    schedule_day: 'monday',
+    schedule_day: '',
     schedule_time: '09:00',
     notify_email: '',
     enabled: true,
@@ -43,22 +53,19 @@ export default function AutomationsClient({ agent, automations, results }: {
   const inputStyle = {
     width: '100%', padding: '10px 14px',
     border: '1px solid var(--border2)', borderRadius: 8,
-    fontFamily: 'var(--sans)', fontSize: 13,
-    background: 'var(--bg2)', color: 'var(--fg)', outline: 'none',
+    fontFamily: 'var(--sidebar-font)', fontSize: 13,
+    background: 'var(--bg3)', color: 'var(--fg)', outline: 'none',
   }
 
-  const selectTemplate = (template: typeof AUTOMATION_TEMPLATES[0]) => {
-    setSelectedTemplate(template)
-    setForm({
-      name: template.name,
-      description: template.description,
-      prompt: template.prompt,
-      schedule: template.schedule,
-      schedule_day: template.schedule_day,
-      schedule_time: template.schedule_time,
-      notify_email: '',
-      enabled: true,
-    })
+  const applyPreset = (idx: number) => {
+    setSelectedPreset(idx)
+    const p = SCHEDULE_PRESETS[idx]
+    if (p.label === 'Custom') {
+      setCustomSchedule(true)
+    } else {
+      setCustomSchedule(false)
+      setForm(prev => ({ ...prev, schedule: p.schedule, schedule_day: p.day, schedule_time: p.time }))
+    }
   }
 
   const calculateNextRun = (schedule: string, day: string, time: string) => {
@@ -66,7 +73,6 @@ export default function AutomationsClient({ agent, automations, results }: {
     const [hours, minutes] = time.split(':').map(Number)
     const next = new Date()
     next.setHours(hours, minutes, 0, 0)
-
     if (schedule === 'daily') {
       if (next <= now) next.setDate(next.getDate() + 1)
     } else if (schedule === 'weekly') {
@@ -91,7 +97,7 @@ export default function AutomationsClient({ agent, automations, results }: {
     const { data } = await supabase.from('scheduled_automations').insert({
       business_agent_id: agent.id,
       name: form.name,
-      description: form.description,
+      description: '',
       prompt: form.prompt,
       schedule: form.schedule,
       schedule_day: form.schedule_day,
@@ -103,7 +109,9 @@ export default function AutomationsClient({ agent, automations, results }: {
     if (data) {
       setAutos(prev => [data, ...prev])
       setShowNew(false)
-      setSelectedTemplate(null)
+      setForm({ name: '', prompt: '', schedule: 'daily', schedule_day: '', schedule_time: '09:00', notify_email: '', enabled: true })
+      setSelectedPreset(0)
+      setCustomSchedule(false)
       setMsg('Automation created!')
       setTimeout(() => setMsg(''), 3000)
     }
@@ -122,15 +130,21 @@ export default function AutomationsClient({ agent, automations, results }: {
 
   const runNow = async (id: string) => {
     setRunning(id)
-    const res = await fetch('/api/run-automation', {
+    const r = await fetch('/api/run-automation', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ automationId: id }),
     })
-    const data = await res.json()
+    const data = await r.json()
     if (data.result) {
       setRunResult({ id, result: data.result })
-      const { data: newResult } = await supabase.from('automation_results').select('*').eq('automation_id', id).order('ran_at', { ascending: false }).limit(1).single()
+      const { data: newResult } = await supabase
+        .from('automation_results')
+        .select('*')
+        .eq('automation_id', id)
+        .order('ran_at', { ascending: false })
+        .limit(1)
+        .single()
       if (newResult) setRes(prev => [newResult, ...prev])
     }
     setRunning(null)
@@ -139,7 +153,7 @@ export default function AutomationsClient({ agent, automations, results }: {
   const formatSchedule = (auto: Record<string, unknown>) => {
     if (auto.schedule === 'daily') return `Every day at ${auto.schedule_time}`
     if (auto.schedule === 'weekly') return `Every ${auto.schedule_day} at ${auto.schedule_time}`
-    if (auto.schedule === 'monthly') return `Monthly on the ${auto.schedule_day}${['1','21','31'].includes(auto.schedule_day as string) ? 'st' : ['2','22'].includes(auto.schedule_day as string) ? 'nd' : ['3','23'].includes(auto.schedule_day as string) ? 'rd' : 'th'} at ${auto.schedule_time}`
+    if (auto.schedule === 'monthly') return `Monthly on the ${auto.schedule_day} at ${auto.schedule_time}`
     return ''
   }
 
@@ -152,69 +166,101 @@ export default function AutomationsClient({ agent, automations, results }: {
   }
 
   return (
-    <>
-      <Navbar />
-      <div style={{ maxWidth: 900, margin: '0 auto', padding: '32px 24px' }}>
+    <div className="app-layout">
+      <Sidebar />
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
-          <div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>Scheduled Automations</div>
-            <h1 style={{ fontFamily: 'var(--serif)', fontSize: 36, fontWeight: 400, marginBottom: 4 }}>{agent.agent_name as string}</h1>
-            <p style={{ fontSize: 14, color: 'var(--muted)' }}>Tasks that run automatically on a schedule</p>
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => router.push(`/agent/${agent.id as string}`)} className="btn btn-outline" style={{ fontSize: 12 }}>← Back</button>
-            <button onClick={() => setShowNew(true)} className="btn btn-accent" style={{ fontSize: 12 }}>+ New automation</button>
+      {/* Run result modal */}
+      {runResult && (
+        <div className="modal-overlay">
+          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 16, width: '100%', maxWidth: 600, maxHeight: '80vh', overflow: 'auto', padding: '36px 40px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <div style={{ fontFamily: 'var(--sidebar-font)', fontSize: 14, color: '#4ade80', fontWeight: 600 }}>✓ Automation complete</div>
+              <button onClick={() => setRunResult(null)} className="btn btn-outline btn-sm">Close</button>
+            </div>
+            <div style={{ fontSize: 14, lineHeight: 1.8, whiteSpace: 'pre-wrap', color: 'var(--fg)', fontFamily: 'var(--sidebar-font)' }}>
+              {runResult.result}
+            </div>
           </div>
         </div>
+      )}
 
-        {msg && (
-          <div style={{ background: '#0d2e14', border: '1px solid #1a4a24', borderRadius: 8, padding: '10px 16px', marginBottom: 20, fontFamily: 'var(--mono)', fontSize: 12, color: '#4ade80' }}>
-            ✓ {msg}
-          </div>
-        )}
+      {/* New automation modal */}
+      {showNew && (
+        <div className="modal-overlay">
+          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 20, width: '100%', maxWidth: 600, maxHeight: '90vh', overflow: 'auto', padding: '36px 40px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+              <div>
+                <div style={{ fontFamily: 'var(--sidebar-font)', fontSize: 20, fontWeight: 700, color: 'var(--fg)', marginBottom: 4 }}>New automation</div>
+                <div style={{ fontFamily: 'var(--sidebar-font)', fontSize: 13, color: 'var(--fg3)' }}>Tell your agent what to do automatically</div>
+              </div>
+              <button onClick={() => { setShowNew(false); setCustomSchedule(false); setSelectedPreset(0) }} className="btn btn-ghost btn-sm">
+                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
 
-        {/* New automation modal */}
-        {showNew && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(4px)' }}>
-            <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 20, width: '100%', maxWidth: 640, maxHeight: '90vh', overflow: 'auto', padding: '36px 40px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                <h2 style={{ fontFamily: 'var(--serif)', fontSize: 26, fontWeight: 400 }}>New automation</h2>
-                <button onClick={() => { setShowNew(false); setSelectedTemplate(null) }} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 18 }}>✕</button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+              {/* Name */}
+              <div>
+                <label style={{ fontFamily: 'var(--sidebar-font)', fontSize: 12, color: 'var(--fg3)', fontWeight: 600, display: 'block', marginBottom: 8, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                  Automation name
+                </label>
+                <input
+                  style={inputStyle}
+                  value={form.name}
+                  onChange={e => setForm({ ...form, name: e.target.value })}
+                  placeholder="e.g. Weekly Summary, Daily Briefing..."
+                />
               </div>
 
-              {!selectedTemplate ? (
-                <div>
-                  <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 20 }}>Choose a template or build your own:</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {AUTOMATION_TEMPLATES.map((template, i) => (
-                      <button key={i} onClick={() => selectTemplate(template)}
-                        style={{ textAlign: 'left', padding: '16px 20px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, cursor: 'pointer', transition: 'all 0.15s' }}
-                        onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--fg)'}
-                        onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'}>
-                        <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 4 }}>{template.name}</div>
-                        <div style={{ fontSize: 12, color: 'var(--muted)' }}>{template.description}</div>
-                        <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--accent)', marginTop: 6 }}>
-                          {template.schedule === 'daily' ? `Every day at ${template.schedule_time}` : template.schedule === 'weekly' ? `Every ${template.schedule_day} at ${template.schedule_time}` : `Monthly on the ${template.schedule_day}st`}
-                        </div>
+              {/* Prompt */}
+              <div>
+                <label style={{ fontFamily: 'var(--sidebar-font)', fontSize: 12, color: 'var(--fg3)', fontWeight: 600, display: 'block', marginBottom: 8, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                  What should your agent do?
+                </label>
+                <textarea
+                  style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6, minHeight: 100 }}
+                  rows={4}
+                  value={form.prompt}
+                  onChange={e => setForm({ ...form, prompt: e.target.value })}
+                  placeholder="Describe in plain English what you want your agent to do automatically..."
+                />
+                {/* Example prompts */}
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ fontFamily: 'var(--sidebar-font)', fontSize: 11, color: 'var(--fg3)', marginBottom: 8 }}>Examples — click to use:</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {EXAMPLES.map((ex, i) => (
+                      <button key={i} onClick={() => setForm({ ...form, prompt: ex })}
+                        style={{ textAlign: 'left', padding: '8px 12px', background: 'var(--bg4)', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', fontFamily: 'var(--sidebar-font)', fontSize: 12, color: 'var(--fg3)', transition: 'all 0.1s', lineHeight: 1.4 }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--fg)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border2)' }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--fg3)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)' }}>
+                        {ex}
                       </button>
                     ))}
                   </div>
                 </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  <div>
-                    <label style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 8 }}>Automation name *</label>
-                    <input style={inputStyle} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Weekly Summary" />
-                  </div>
-                  <div>
-                    <label style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 8 }}>What should the agent do? *</label>
-                    <textarea style={{ ...inputStyle, resize: 'vertical' }} rows={4} value={form.prompt} onChange={e => setForm({ ...form, prompt: e.target.value })} placeholder="Describe exactly what you want the agent to do automatically..." />
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+              </div>
+
+              {/* Schedule presets */}
+              <div>
+                <label style={{ fontFamily: 'var(--sidebar-font)', fontSize: 12, color: 'var(--fg3)', fontWeight: 600, display: 'block', marginBottom: 8, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                  When to run
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 12 }}>
+                  {SCHEDULE_PRESETS.map((preset, i) => (
+                    <button key={i} onClick={() => applyPreset(i)}
+                      style={{ padding: '10px 12px', background: selectedPreset === i ? 'var(--fg)' : 'var(--bg3)', border: `1px solid ${selectedPreset === i ? 'var(--fg)' : 'var(--border2)'}`, borderRadius: 8, cursor: 'pointer', fontFamily: 'var(--sidebar-font)', fontSize: 12, color: selectedPreset === i ? 'var(--bg)' : 'var(--fg3)', fontWeight: selectedPreset === i ? 600 : 400, transition: 'all 0.1s', textAlign: 'center' }}>
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Custom schedule */}
+                {customSchedule && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, padding: '16px', background: 'var(--bg3)', borderRadius: 10, border: '1px solid var(--border)' }}>
                     <div>
-                      <label style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 8 }}>Frequency</label>
-                      <select style={inputStyle} value={form.schedule} onChange={e => setForm({ ...form, schedule: e.target.value })}>
+                      <label style={{ fontFamily: 'var(--sidebar-font)', fontSize: 11, color: 'var(--fg3)', display: 'block', marginBottom: 6 }}>Frequency</label>
+                      <select style={{ ...inputStyle, padding: '8px 10px' }} value={form.schedule} onChange={e => setForm({ ...form, schedule: e.target.value })}>
                         <option value="daily">Daily</option>
                         <option value="weekly">Weekly</option>
                         <option value="monthly">Monthly</option>
@@ -222,147 +268,227 @@ export default function AutomationsClient({ agent, automations, results }: {
                     </div>
                     {form.schedule === 'weekly' && (
                       <div>
-                        <label style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 8 }}>Day</label>
-                        <select style={inputStyle} value={form.schedule_day} onChange={e => setForm({ ...form, schedule_day: e.target.value })}>
+                        <label style={{ fontFamily: 'var(--sidebar-font)', fontSize: 11, color: 'var(--fg3)', display: 'block', marginBottom: 6 }}>Day</label>
+                        <select style={{ ...inputStyle, padding: '8px 10px' }} value={form.schedule_day} onChange={e => setForm({ ...form, schedule_day: e.target.value })}>
                           {DAYS.map(d => <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>)}
                         </select>
                       </div>
                     )}
                     {form.schedule === 'monthly' && (
                       <div>
-                        <label style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 8 }}>Day of month</label>
-                        <select style={inputStyle} value={form.schedule_day} onChange={e => setForm({ ...form, schedule_day: e.target.value })}>
+                        <label style={{ fontFamily: 'var(--sidebar-font)', fontSize: 11, color: 'var(--fg3)', display: 'block', marginBottom: 6 }}>Day of month</label>
+                        <select style={{ ...inputStyle, padding: '8px 10px' }} value={form.schedule_day} onChange={e => setForm({ ...form, schedule_day: e.target.value })}>
                           {Array.from({ length: 28 }, (_, i) => i + 1).map(d => <option key={d} value={String(d)}>{d}</option>)}
                         </select>
                       </div>
                     )}
                     <div>
-                      <label style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 8 }}>Time</label>
-                      <input type="time" style={inputStyle} value={form.schedule_time} onChange={e => setForm({ ...form, schedule_time: e.target.value })} />
+                      <label style={{ fontFamily: 'var(--sidebar-font)', fontSize: 11, color: 'var(--fg3)', display: 'block', marginBottom: 6 }}>Time</label>
+                      <input type="time" style={{ ...inputStyle, padding: '8px 10px' }} value={form.schedule_time} onChange={e => setForm({ ...form, schedule_time: e.target.value })} />
                     </div>
                   </div>
-                  <div>
-                    <label style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 8 }}>Send results to email (optional)</label>
-                    <input style={inputStyle} type="email" value={form.notify_email} onChange={e => setForm({ ...form, notify_email: e.target.value })} placeholder="owner@yourbusiness.com" />
-                  </div>
-                  <div style={{ display: 'flex', gap: 10, paddingTop: 8 }}>
-                    <button onClick={saveAutomation} disabled={saving || !form.name || !form.prompt} className="btn btn-accent" style={{ fontSize: 13, flex: 1, opacity: (!form.name || !form.prompt) ? 0.5 : 1 }}>
-                      {saving ? 'Creating...' : 'Create automation →'}
-                    </button>
-                    <button onClick={() => setSelectedTemplate(null)} className="btn btn-outline" style={{ fontSize: 13 }}>← Back</button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+                )}
 
-        {/* Run result modal */}
-        {runResult && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(4px)' }}>
-            <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 20, width: '100%', maxWidth: 600, maxHeight: '80vh', overflow: 'auto', padding: '36px 40px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: '#4ade80', letterSpacing: 1 }}>✓ AUTOMATION COMPLETE</div>
-                <button onClick={() => setRunResult(null)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 18 }}>✕</button>
+                {/* Show selected schedule summary */}
+                {!customSchedule && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ flex: 1, padding: '10px 14px', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 8, fontFamily: 'var(--sidebar-font)', fontSize: 13, color: 'var(--fg2)' }}>
+                      {SCHEDULE_PRESETS[selectedPreset].schedule === 'daily' && `Runs every day`}
+                      {SCHEDULE_PRESETS[selectedPreset].schedule === 'weekly' && `Runs every ${SCHEDULE_PRESETS[selectedPreset].day}`}
+                      {SCHEDULE_PRESETS[selectedPreset].schedule === 'monthly' && `Runs monthly on the ${SCHEDULE_PRESETS[selectedPreset].day}st`}
+                    </div>
+                    <span style={{ fontFamily: 'var(--sidebar-font)', fontSize: 13, color: 'var(--fg3)' }}>at</span>
+                    <input
+                      type="time"
+                      style={{ ...inputStyle, width: 130, padding: '10px 12px' }}
+                      value={form.schedule_time}
+                      onChange={e => setForm({ ...form, schedule_time: e.target.value })}
+                    />
+                  </div>
+                )}
               </div>
-              <div style={{ fontSize: 14, lineHeight: 1.8, whiteSpace: 'pre-wrap', color: 'var(--fg)' }}>{runResult.result}</div>
-            </div>
-          </div>
-        )}
 
-        {/* Automations list */}
-        {autos.length === 0 ? (
-          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: '60px 40px', textAlign: 'center', marginBottom: 32 }}>
-            <div style={{ fontSize: 40, marginBottom: 16 }}>
-              <svg width="48" height="48" fill="none" stroke="var(--muted)" strokeWidth="1" viewBox="0 0 24 24" style={{ margin: '0 auto', display: 'block' }}><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-            </div>
-            <h3 style={{ fontFamily: 'var(--serif)', fontSize: 22, fontWeight: 400, marginBottom: 8 }}>No automations yet</h3>
-            <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 24 }}>Create your first automation to put your agent to work automatically.</p>
-            <button onClick={() => setShowNew(true)} className="btn btn-accent" style={{ fontSize: 13 }}>+ Create first automation</button>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 40 }}>
-            {autos.map(auto => (
-              <div key={auto.id as string} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 14, padding: '20px 24px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: auto.enabled ? '#4ade80' : 'var(--muted)', flexShrink: 0 }} />
-                      <h3 style={{ fontFamily: 'var(--serif)', fontSize: 18, fontWeight: 400 }}>{auto.name as string}</h3>
-                      <span style={{ fontFamily: 'var(--mono)', fontSize: 10, padding: '2px 8px', borderRadius: 4, background: 'var(--bg3)', color: 'var(--muted)', border: '1px solid var(--border)' }}>
-                        {auto.schedule as string}
-                      </span>
-                    </div>
-                    {auto.description && <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 8 }}>{auto.description as string}</p>}
-                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                      <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--accent)' }}>
-                        {formatSchedule(auto)}
-                      </span>
-                      {auto.next_run && (
-                        <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)' }}>
-                          Next: {new Date(auto.next_run as string).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      )}
-                      {auto.last_run && (
-                        <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)' }}>
-                          Last run: {timeAgo(auto.last_run as string)}
-                        </span>
-                      )}
-                      {auto.notify_email && (
-                        <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)' }}>
-                          → {auto.notify_email as string}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                    <button
-                      onClick={() => runNow(auto.id as string)}
-                      disabled={running === auto.id}
-                      className="btn btn-accent"
-                      style={{ fontSize: 11, padding: '6px 14px', opacity: running === auto.id ? 0.6 : 1 }}>
-                      {running === auto.id ? 'Running...' : '▶ Run now'}
-                    </button>
-                    <button
-                      onClick={() => toggleEnabled(auto.id as string, auto.enabled as boolean)}
-                      style={{ fontFamily: 'var(--mono)', fontSize: 11, padding: '6px 14px', background: 'transparent', border: '1px solid var(--border2)', borderRadius: 8, cursor: 'pointer', color: auto.enabled ? '#fbbf24' : '#4ade80' }}>
-                      {auto.enabled ? 'Pause' : 'Enable'}
-                    </button>
-                    <button
-                      onClick={() => deleteAutomation(auto.id as string)}
-                      style={{ fontFamily: 'var(--mono)', fontSize: 11, padding: '6px 14px', background: 'transparent', border: '1px solid #4a1a1a', borderRadius: 8, cursor: 'pointer', color: '#f87171' }}>
-                      Delete
-                    </button>
-                  </div>
-                </div>
+              {/* Notify email */}
+              <div>
+                <label style={{ fontFamily: 'var(--sidebar-font)', fontSize: 12, color: 'var(--fg3)', fontWeight: 600, display: 'block', marginBottom: 8, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                  Email results to (optional)
+                </label>
+                <input
+                  type="email"
+                  style={inputStyle}
+                  value={form.notify_email}
+                  onChange={e => setForm({ ...form, notify_email: e.target.value })}
+                  placeholder="owner@yourbusiness.com"
+                />
               </div>
-            ))}
-          </div>
-        )}
 
-        {/* Recent results */}
-        {res.length > 0 && (
-          <div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 16 }}>Recent results</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {res.slice(0, 5).map(result => (
-                <div key={result.id as string} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 18px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80' }} />
-                      <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: '#4ade80' }}>completed</span>
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: 10, paddingTop: 8 }}>
+                <button
+                  onClick={saveAutomation}
+                  disabled={saving || !form.name || !form.prompt}
+                  className="btn btn-accent"
+                  style={{ flex: 1, fontSize: 14, height: 44, fontFamily: 'var(--sidebar-font)', fontWeight: 600, opacity: (!form.name || !form.prompt) ? 0.5 : 1 }}>
+                  {saving ? 'Creating...' : 'Create automation →'}
+                </button>
+                <button
+                  onClick={() => { setShowNew(false); setCustomSchedule(false); setSelectedPreset(0) }}
+                  className="btn btn-outline"
+                  style={{ fontSize: 13, fontFamily: 'var(--sidebar-font)' }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <main className="app-main">
+        <div className="app-header">
+          <button onClick={() => router.push(`/agent/${agent.id as string}`)} className="btn btn-ghost btn-sm">
+            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+            Back
+          </button>
+          <div style={{ width: 1, height: 16, background: 'var(--border2)' }} />
+          <span style={{ fontFamily: 'var(--sidebar-font)', fontSize: 14, fontWeight: 600 }}>Automations</span>
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--fg3)' }}>{agent.business_name as string}</span>
+        </div>
+
+        <div style={{ width: '100%', padding: '40px 48px' }}>
+
+          {msg && (
+            <div style={{ background: '#0d2e14', border: '1px solid #1a4a24', borderRadius: 8, padding: '10px 16px', marginBottom: 20, fontFamily: 'var(--sidebar-font)', fontSize: 13, color: '#4ade80' }}>
+              ✓ {msg}
+            </div>
+          )}
+
+          {/* Header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32 }}>
+            <div>
+              <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--fg)', fontFamily: 'var(--sidebar-font)', marginBottom: 6 }}>
+                Scheduled Automations
+              </div>
+              <div style={{ fontSize: 14, color: 'var(--fg3)', fontFamily: 'var(--sidebar-font)' }}>
+                Tasks your agent runs automatically — you write it, it executes it.
+              </div>
+            </div>
+            <button onClick={() => setShowNew(true)} className="btn btn-accent" style={{ height: 44, padding: '0 24px', fontSize: 14, fontFamily: 'var(--sidebar-font)', fontWeight: 600 }}>
+              + New automation
+            </button>
+          </div>
+
+          {/* Empty state */}
+          {autos.length === 0 ? (
+            <div className="card">
+              <div className="empty-state">
+                <div className="empty-state-icon">
+                  <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                </div>
+                <div className="empty-state-title" style={{ fontFamily: 'var(--sidebar-font)', fontSize: 16 }}>No automations yet</div>
+                <div className="empty-state-desc" style={{ fontFamily: 'var(--sidebar-font)' }}>
+                  Create your first automation. Tell your agent what to do and when — in plain English.
+                </div>
+                <button onClick={() => setShowNew(true)} className="btn btn-accent" style={{ fontFamily: 'var(--sidebar-font)', fontWeight: 600 }}>
+                  + Create first automation
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 40 }}>
+              {autos.map(auto => (
+                <div key={auto.id as string} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: '20px 24px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: auto.enabled ? '#4ade80' : 'var(--fg3)', flexShrink: 0 }} />
+                        <div style={{ fontFamily: 'var(--sidebar-font)', fontSize: 16, fontWeight: 600, color: 'var(--fg)' }}>
+                          {auto.name as string}
+                        </div>
+                        <span style={{ fontFamily: 'var(--mono)', fontSize: 10, padding: '2px 8px', borderRadius: 4, background: 'var(--bg4)', color: 'var(--fg3)', border: '1px solid var(--border)' }}>
+                          {auto.schedule as string}
+                        </span>
+                      </div>
+
+                      {/* Show the actual prompt */}
+                      <div style={{ fontSize: 13, color: 'var(--fg3)', fontFamily: 'var(--sidebar-font)', marginBottom: 10, lineHeight: 1.5, background: 'var(--bg3)', padding: '8px 12px', borderRadius: 6, borderLeft: '2px solid var(--border2)' }}>
+                        {auto.prompt as string}
+                      </div>
+
+                      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                        <span style={{ fontFamily: 'var(--sidebar-font)', fontSize: 12, color: 'var(--accent)', fontWeight: 500 }}>
+                          {formatSchedule(auto)}
+                        </span>
+                        {auto.next_run && (
+                          <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--fg3)' }}>
+                            Next: {new Date(auto.next_run as string).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        )}
+                        {auto.last_run && (
+                          <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--fg3)' }}>
+                            Last: {timeAgo(auto.last_run as string)}
+                          </span>
+                        )}
+                        {auto.notify_email && (
+                          <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--fg3)' }}>
+                            → {auto.notify_email as string}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)' }}>{timeAgo(result.ran_at as string)}</span>
+
+                    <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                      <button
+                        onClick={() => runNow(auto.id as string)}
+                        disabled={running === auto.id}
+                        className="btn btn-accent btn-sm"
+                        style={{ fontSize: 12, fontFamily: 'var(--sidebar-font)', opacity: running === auto.id ? 0.6 : 1 }}>
+                        {running === auto.id ? 'Running...' : '▶ Run now'}
+                      </button>
+                      <button
+                        onClick={() => toggleEnabled(auto.id as string, auto.enabled as boolean)}
+                        className="btn btn-outline btn-sm"
+                        style={{ fontSize: 12, fontFamily: 'var(--sidebar-font)', color: auto.enabled ? '#fbbf24' : '#4ade80' }}>
+                        {auto.enabled ? 'Pause' : 'Resume'}
+                      </button>
+                      <button
+                        onClick={() => deleteAutomation(auto.id as string)}
+                        className="btn btn-danger btn-sm"
+                        style={{ fontSize: 12, fontFamily: 'var(--sidebar-font)' }}>
+                        Delete
+                      </button>
+                    </div>
                   </div>
-                  <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.6 }}>
-                    {(result.result as string)?.slice(0, 150)}{(result.result as string)?.length > 150 ? '...' : ''}
-                  </p>
                 </div>
               ))}
             </div>
-          </div>
-        )}
-      </div>
-    </>
+          )}
+
+          {/* Recent results */}
+          {res.length > 0 && (
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--fg)', fontFamily: 'var(--sidebar-font)', marginBottom: 14 }}>
+                Recent results
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {res.slice(0, 5).map(result => (
+                  <div key={result.id as string} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 18px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80' }} />
+                        <span style={{ fontFamily: 'var(--sidebar-font)', fontSize: 12, color: '#4ade80', fontWeight: 600 }}>completed</span>
+                      </div>
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--fg3)' }}>{timeAgo(result.ran_at as string)}</span>
+                    </div>
+                    <p style={{ fontSize: 13, color: 'var(--fg3)', lineHeight: 1.6, fontFamily: 'var(--sidebar-font)' }}>
+                      {(result.result as string)?.slice(0, 200)}{(result.result as string)?.length > 200 ? '...' : ''}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
   )
 }
