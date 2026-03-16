@@ -21,7 +21,19 @@ export default async function ManagePage({
     supabase.from('team_members').select('*').eq('business_agent_id', id).order('invited_at', { ascending: false }),
   ])
 
-  if (!agent) return <div style={{ padding: 40, color: '#fff' }}>Agent not found</div>
+  if (!agent) return (
+    <div style={{ padding: 40, color: '#fff', background: '#080808', minHeight: '100vh', fontFamily: 'monospace' }}>
+      Agent not found
+    </div>
+  )
 
-  return <ManageClient agent={agent} knowledge={knowledge || []} contacts={contacts || []} memories={memories || []} team={team || []} />
+  return (
+    <ManageClient
+      agent={agent}
+      knowledge={knowledge || []}
+      contacts={contacts || []}
+      memories={memories || []}
+      team={team || []}
+    />
+  )
 }

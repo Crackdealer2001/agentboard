@@ -31,6 +31,7 @@ export default function ManageClient({
   const [msg, setMsg] = useState('')
   const [msgType, setMsgType] = useState<'success' | 'error'>('success')
   const [csvPreview, setCsvPreview] = useState<Record<string, string>[]>([])
+  const [csvAllRows, setCsvAllRows] = useState<Record<string, string>[]>([])
   const [csvHeaders, setCsvHeaders] = useState<string[]>([])
   const [columnMap, setColumnMap] = useState<Record<string, string>>({})
   const [showPreview, setShowPreview] = useState(false)
@@ -47,7 +48,6 @@ export default function ManageClient({
     setTimeout(() => setMsg(''), 3000)
   }
 
-  // CSV upload handler
   const handleCSVUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -60,8 +60,8 @@ export default function ManageClient({
         const headers = results.meta.fields || []
         setCsvHeaders(headers)
         setCsvPreview(rows.slice(0, 5))
+        setCsvAllRows(rows)
 
-        // Auto-map columns
         const autoMap: Record<string, string> = {}
         headers.forEach(h => {
           const lower = h.toLowerCase()
@@ -80,22 +80,15 @@ export default function ManageClient({
     e.target.value = ''
   }
 
-  // Import all CSV contacts
   const importContacts = async () => {
-    if (!csvPreview.length) return
+    if (!csvAllRows.length) return
     setImporting(true)
 
-    // Re-parse full file
-    const input = fileInputRef.current
-    const fullData = csvPreview
-
-    const contactsToInsert = fullData.map(row => {
-      const contact: Record<string, string> = {
-        name: '', email: '', phone: '', company: '', notes: ''
-      }
+    const contactsToInsert = csvAllRows.map(row => {
+      const contact: Record<string, string> = { name: '', email: '', phone: '', company: '', notes: '' }
       Object.entries(columnMap).forEach(([col, field]) => {
         if (field !== 'skip' && row[col]) {
-          contact[field] = (contact[field] ? contact[field] + ' ' : '') + row[col]
+          contact[field] = contact[field] ? `${contact[field]} ${row[col]}` : row[col]
         }
       })
       return {
@@ -119,12 +112,12 @@ export default function ManageClient({
       setCts(prev => [...(data || []), ...prev])
       setShowPreview(false)
       setCsvPreview([])
+      setCsvAllRows([])
       showMsg(`Successfully imported ${data?.length || 0} contacts!`)
     }
     setImporting(false)
   }
 
-  // Knowledge base file upload
   const handleKbFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -136,6 +129,7 @@ export default function ManageClient({
         title: file.name.replace(/\.[^/.]+$/, ''),
         content: content.slice(0, 5000),
       }))
+      showMsg('File loaded! Review and save to knowledge base.')
     }
     reader.readAsText(file)
     e.target.value = ''
@@ -150,7 +144,11 @@ export default function ManageClient({
       content: newKb.content,
       type: newKb.type,
     }).select().single()
-    if (data) { setKb(prev => [data, ...prev]); setNewKb({ title: '', content: '', type: 'general' }); showMsg('Knowledge saved!') }
+    if (data) {
+      setKb(prev => [data, ...prev])
+      setNewKb({ title: '', content: '', type: 'general' })
+      showMsg('Knowledge saved!')
+    }
     setSaving(false)
   }
 
@@ -166,7 +164,11 @@ export default function ManageClient({
       business_agent_id: agent.id,
       ...newContact,
     }).select().single()
-    if (data) { setCts(prev => [data, ...prev]); setNewContact({ name: '', email: '', phone: '', company: '', notes: '' }); showMsg('Contact saved!') }
+    if (data) {
+      setCts(prev => [data, ...prev])
+      setNewContact({ name: '', email: '', phone: '', company: '', notes: '' })
+      showMsg('Contact saved!')
+    }
     setSaving(false)
   }
 
@@ -188,7 +190,11 @@ export default function ManageClient({
       email: newTeam.email,
       role: newTeam.role,
     }).select().single()
-    if (data) { setTm(prev => [data, ...prev]); setNewTeam({ email: '', role: 'member' }); showMsg('Team member invited!') }
+    if (data) {
+      setTm(prev => [data, ...prev])
+      setNewTeam({ email: '', role: 'member' })
+      showMsg('Team member invited!')
+    }
     setSaving(false)
   }
 
@@ -235,7 +241,6 @@ export default function ManageClient({
           </div>
         )}
 
-        {/* Tabs */}
         <div style={{ display: 'flex', gap: 6, marginBottom: 28, background: 'var(--bg2)', padding: 6, borderRadius: 10, border: '1px solid var(--border)', flexWrap: 'wrap' }}>
           <button style={tabStyle('knowledge')} onClick={() => setActiveTab('knowledge')}>📚 Knowledge Base</button>
           <button style={tabStyle('contacts')} onClick={() => setActiveTab('contacts')}>👥 Contacts ({cts.length})</button>
@@ -249,14 +254,13 @@ export default function ManageClient({
             <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 24, marginBottom: 24 }}>
               <div className="label" style={{ marginBottom: 8 }}>Add knowledge</div>
               <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>
-                Add your pricing, FAQs, policies, products — anything your agent should know.
+                Add pricing, FAQs, policies, products — anything your agent should know about your business.
               </p>
 
-              {/* File upload for knowledge */}
-              <div style={{ background: 'var(--bg3)', border: '2px dashed var(--border2)', borderRadius: 10, padding: '16px 20px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ background: 'var(--bg3)', border: '2px dashed var(--border2)', borderRadius: 10, padding: '16px 20px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 2 }}>Upload a file</div>
-                  <div style={{ fontSize: 12, color: 'var(--muted)' }}>TXT, CSV, or any text file — agent will learn from it</div>
+                  <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 2 }}>📄 Upload a file</div>
+                  <div style={{ fontSize: 12, color: 'var(--muted)' }}>TXT, CSV, or any text file — agent learns from it instantly</div>
                 </div>
                 <button onClick={() => kbFileRef.current?.click()} className="btn btn-outline" style={{ fontSize: 12 }}>
                   Choose file
@@ -293,7 +297,7 @@ export default function ManageClient({
 
             {kb.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px', color: 'var(--muted)', fontFamily: 'var(--mono)', fontSize: 13 }}>
-                No knowledge added yet.
+                No knowledge added yet. Add your first entry above.
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -304,7 +308,9 @@ export default function ManageClient({
                         <span className="tag">{k.type as string}</span>
                         <span style={{ fontSize: 13, fontWeight: 500 }}>{k.title as string}</span>
                       </div>
-                      <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.6 }}>{(k.content as string)?.slice(0, 120)}{(k.content as string)?.length > 120 ? '...' : ''}</p>
+                      <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.6 }}>
+                        {(k.content as string)?.slice(0, 120)}{(k.content as string)?.length > 120 ? '...' : ''}
+                      </p>
                     </div>
                     <button onClick={() => deleteKb(k.id as string)} style={{ background: 'none', border: '1px solid var(--border2)', color: 'var(--muted)', padding: '4px 10px', borderRadius: 6, cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 11, flexShrink: 0 }}>
                       Delete
@@ -319,17 +325,16 @@ export default function ManageClient({
         {/* CONTACTS */}
         {activeTab === 'contacts' && (
           <div>
-            {/* CSV Import */}
             <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 24, marginBottom: 24 }}>
               <div className="label" style={{ marginBottom: 8 }}>Import from CSV</div>
               <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>
-                Upload a CSV file from your existing database, CRM, or spreadsheet. We'll auto-detect columns.
+                Upload a CSV from your existing CRM, database, or spreadsheet. We auto-detect columns.
               </p>
-              <div style={{ background: 'var(--bg3)', border: '2px dashed var(--border2)', borderRadius: 10, padding: '24px', textAlign: 'center', marginBottom: 16 }}>
-                <div style={{ fontSize: 32, marginBottom: 8 }}>📂</div>
-                <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 4 }}>Drop your CSV file here</div>
-                <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 16 }}>
-                  Supports: Excel exports, CRM exports, Google Sheets downloads, any CSV file
+              <div style={{ background: 'var(--bg3)', border: '2px dashed var(--border2)', borderRadius: 10, padding: '28px', textAlign: 'center', marginBottom: 16 }}>
+                <div style={{ fontSize: 36, marginBottom: 8 }}>📂</div>
+                <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 4 }}>Upload your customer CSV file</div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 20 }}>
+                  Works with exports from any CRM, Google Sheets, Excel, or database
                 </div>
                 <button onClick={() => fileInputRef.current?.click()} className="btn btn-accent" style={{ fontSize: 13 }}>
                   Choose CSV file →
@@ -337,30 +342,23 @@ export default function ManageClient({
                 <input ref={fileInputRef} type="file" accept=".csv" onChange={handleCSVUpload} style={{ display: 'none' }} />
               </div>
               <div style={{ fontSize: 12, color: 'var(--muted)', fontFamily: 'var(--mono)' }}>
-                Expected columns: name, email, phone, company, notes (we auto-detect these)
+                Tip: Expected columns — name, email, phone, company, notes (auto-detected)
               </div>
             </div>
 
-            {/* CSV Preview & Column Mapping */}
             {showPreview && csvPreview.length > 0 && (
               <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 24, marginBottom: 24 }}>
-                <div className="label" style={{ marginBottom: 16 }}>Map columns to contact fields</div>
+                <div className="label" style={{ marginBottom: 8 }}>Map columns</div>
                 <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 20 }}>
-                  We detected {csvHeaders.length} columns. Map each one to a contact field or skip it.
+                  We detected {csvHeaders.length} columns and {csvAllRows.length} rows. Map each column to a contact field.
                 </p>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12, marginBottom: 24 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12, marginBottom: 24 }}>
                   {csvHeaders.map(header => (
                     <div key={header}>
                       <label className="label">{header}</label>
-                      <select
-                        style={inputStyle}
-                        value={columnMap[header] || 'skip'}
-                        onChange={e => setColumnMap(prev => ({ ...prev, [header]: e.target.value }))}
-                      >
-                        {contactFields.map(f => (
-                          <option key={f} value={f}>{f === 'skip' ? '— Skip —' : f}</option>
-                        ))}
+                      <select style={inputStyle} value={columnMap[header] || 'skip'} onChange={e => setColumnMap(prev => ({ ...prev, [header]: e.target.value }))}>
+                        {contactFields.map(f => <option key={f} value={f}>{f === 'skip' ? '— Skip —' : f}</option>)}
                       </select>
                     </div>
                   ))}
@@ -368,12 +366,12 @@ export default function ManageClient({
 
                 <div style={{ marginBottom: 20 }}>
                   <div className="label" style={{ marginBottom: 10 }}>Preview (first 5 rows)</div>
-                  <div style={{ overflowX: 'auto' }}>
+                  <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                       <thead>
                         <tr>
                           {csvHeaders.map(h => (
-                            <th key={h} style={{ padding: '8px 12px', background: 'var(--fg)', color: 'var(--bg)', textAlign: 'left', fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: 1 }}>
+                            <th key={h} style={{ padding: '10px 14px', background: 'var(--fg)', color: 'var(--bg)', textAlign: 'left', fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: 1, whiteSpace: 'nowrap' }}>
                               {h}
                             </th>
                           ))}
@@ -381,9 +379,9 @@ export default function ManageClient({
                       </thead>
                       <tbody>
                         {csvPreview.map((row, i) => (
-                          <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+                          <tr key={i} style={{ borderBottom: '1px solid var(--border)', background: i % 2 === 0 ? 'var(--bg2)' : 'var(--bg3)' }}>
                             {csvHeaders.map(h => (
-                              <td key={h} style={{ padding: '8px 12px', color: 'var(--muted)', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <td key={h} style={{ padding: '10px 14px', color: 'var(--muted)', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {row[h] || '—'}
                               </td>
                             ))}
@@ -396,16 +394,15 @@ export default function ManageClient({
 
                 <div style={{ display: 'flex', gap: 10 }}>
                   <button onClick={importContacts} disabled={importing} className="btn btn-accent" style={{ fontSize: 13 }}>
-                    {importing ? 'Importing...' : `Import ${csvPreview.length} contacts →`}
+                    {importing ? 'Importing...' : `Import all ${csvAllRows.length} contacts →`}
                   </button>
-                  <button onClick={() => { setShowPreview(false); setCsvPreview([]) }} className="btn btn-outline" style={{ fontSize: 13 }}>
+                  <button onClick={() => { setShowPreview(false); setCsvPreview([]); setCsvAllRows([]) }} className="btn btn-outline" style={{ fontSize: 13 }}>
                     Cancel
                   </button>
                 </div>
               </div>
             )}
 
-            {/* Manual add */}
             <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 24, marginBottom: 24 }}>
               <div className="label" style={{ marginBottom: 16 }}>Add contact manually</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
@@ -473,7 +470,7 @@ export default function ManageClient({
           <div>
             <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 20 }}>
               <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.7 }}>
-                These are facts your agent has learned automatically from conversations. Delete any that are incorrect.
+                These are facts your agent has learned automatically from conversations. It uses this memory in every response. Delete any that are incorrect.
               </p>
             </div>
             {mem.length === 0 ? (
@@ -527,7 +524,7 @@ export default function ManageClient({
 
             {tm.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px', color: 'var(--muted)', fontFamily: 'var(--mono)', fontSize: 13 }}>
-                No team members yet.
+                No team members yet. Invite your staff above.
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
