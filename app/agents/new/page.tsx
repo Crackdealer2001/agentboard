@@ -1,108 +1,58 @@
-'use client'
-import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import DeleteAgentButton from '@/components/DeleteAgentButton'
 
-export default function NewAgentPage() {
-  const router = useRouter()
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [form, setForm] = useState({
-    name: '', description: '', category: '', price_label: '', price_amount: '', tags: ''
-  })
+export default async function AgentsPage() {
+  const { data: agents } = await supabase
+    .from('agents')
+    .select('*')
+    .eq('is_active', true)
+    .order('created_at', { ascending: false })
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setError('You must be logged in to list an agent.'); setLoading(false); return }
-
-    const { error } = await supabase.from('agents').insert({
-      name: form.name,
-      description: form.description,
-      category: form.category,
-      price_label: form.price_label,
-      price_amount: Number(form.price_amount),
-      tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
-      user_id: user.id,
-      is_active: true,
-    })
-
-    if (error) { setError(error.message); setLoading(false); return }
-    router.push('/agents')
-  }
-
-  const inputStyle = {
-    width: '100%', padding: '10px 14px', border: '1px solid #ddd',
-    borderRadius: 8, fontSize: 14, background: 'transparent', color: 'inherit'
-  }
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
   return (
-    <main style={{ fontFamily: 'sans-serif', maxWidth: 560, margin: '0 auto', padding: '40px 24px' }}>
+    <main style={{ fontFamily: 'sans-serif', maxWidth: 900, margin: '0 auto', padding: '40px 24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 700 }}>List an Agent</h1>
-        <Link href="/agents" style={{ color: '#666', textDecoration: 'none' }}>← Back</Link>
+        <h1 style={{ fontSize: 32, fontWeight: 700 }}>Browse Agents</h1>
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+          <Link href="/agents/new" style={{ background: '#000', color: '#fff', padding: '10px 20px', borderRadius: 8, textDecoration: 'none', fontSize: 14 }}>
+            + List Agent
+          </Link>
+          <Link href="/" style={{ color: '#666', textDecoration: 'none' }}>← Home</Link>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: 20 }}>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6 }}>Agent name</label>
-          <input type="text" placeholder="e.g. SEO Writer Bot" required style={inputStyle}
-            value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
-        </div>
+      {agents?.length === 0 && (
+        <p style={{ color: '#666' }}>No agents listed yet. Be the first!</p>
+      )}
 
-        <div style={{ marginBottom: 20 }}>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6 }}>Description</label>
-          <textarea placeholder="What does your agent do? What are its inputs and outputs?" required rows={4}
-            value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
-            style={{ ...inputStyle, resize: 'vertical' }} />
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 20 }}>
+        {agents?.map(agent => (
+          <div key={agent.id} style={{ border: '1px solid #e5e5e5', borderRadius: 12, padding: 20 }}>
+            <div style={{ fontSize: 13, background: '#f3f3f3', display: 'inline-block', padding: '3px 10px', borderRadius: 20, marginBottom: 10 }}>
+              {agent.category}
+            </div>
 
-        <div style={{ marginBottom: 20 }}>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6 }}>Category</label>
-          <select required style={inputStyle}
-            value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
-            <option value="">Select a category</option>
-            <option>Data extraction</option>
-            <option>Copywriting</option>
-            <option>Research</option>
-            <option>Code generation</option>
-            <option>Email / outreach</option>
-            <option>Image processing</option>
-            <option>Customer support</option>
-            <option>Other</option>
-          </select>
-        </div>
+            <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>{agent.name}</h2>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
-          <div>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6 }}>Price label</label>
-            <input type="text" placeholder="e.g. $25/task or $49/mo" required style={inputStyle}
-              value={form.price_label} onChange={e => setForm({ ...form, price_label: e.target.value })} />
+            <p style={{ fontSize: 14, color: '#666', marginBottom: 16, lineHeight: 1.5 }}>
+              {agent.description}
+            </p>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontWeight: 600 }}>{agent.price_label}</span>
+              <span style={{ fontSize: 13, color: '#888' }}>★ {agent.rating}</span>
+            </div>
+
+            {user?.id === agent.user_id && (
+              <DeleteAgentButton agentId={agent.id} />
+            )}
           </div>
-          <div>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6 }}>Price amount (USD)</label>
-            <input type="number" placeholder="25" required style={inputStyle}
-              value={form.price_amount} onChange={e => setForm({ ...form, price_amount: e.target.value })} />
-          </div>
-        </div>
-
-        <div style={{ marginBottom: 28 }}>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6 }}>Tags <span style={{ color: '#999', fontWeight: 400 }}>(comma separated)</span></label>
-          <input type="text" placeholder="e.g. writing, SEO, automation" style={inputStyle}
-            value={form.tags} onChange={e => setForm({ ...form, tags: e.target.value })} />
-        </div>
-
-        {error && <p style={{ color: 'red', fontSize: 14, marginBottom: 16 }}>{error}</p>}
-
-        <button type="submit" disabled={loading}
-          style={{ width: '100%', padding: 12, background: '#000', color: '#fff', border: 'none', borderRadius: 8, fontSize: 15, cursor: 'pointer', opacity: loading ? 0.6 : 1 }}>
-          {loading ? 'Listing...' : 'List Agent →'}
-        </button>
-      </form>
+        ))}
+      </div>
     </main>
   )
 }
