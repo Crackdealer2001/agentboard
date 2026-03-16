@@ -2,72 +2,175 @@
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import Navbar from '@/components/Navbar'
 
 export default function AuthPage() {
   const router = useRouter()
-  const [isLogin, setIsLogin] = useState(true)
+  const [mode, setMode] = useState<'signin' | 'signup'>('signup')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState('')
-  const [isError, setIsError] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true); setMessage('')
-    if (isLogin) {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) { setMessage(error.message); setIsError(true); setLoading(false); return }
-      router.push('/')
-    } else {
+  const redirectTo = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search).get('redirect') || '/dashboard'
+    : '/dashboard'
+
+  const handleAuth = async () => {
+    setLoading(true)
+    setError('')
+    setSuccess('')
+
+    if (mode === 'signup') {
       const { error } = await supabase.auth.signUp({ email, password })
-      if (error) { setMessage(error.message); setIsError(true); setLoading(false); return }
-      setMessage('Check your email for a confirmation link!'); setIsError(false)
+      if (error) {
+        setError(error.message)
+      } else {
+        setSuccess('Account created! Signing you in...')
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+        if (!signInError) router.push(redirectTo)
+      }
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) {
+        setError(error.message)
+      } else {
+        router.push(redirectTo)
+      }
     }
     setLoading(false)
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') handleAuth()
+  }
+
+  const inputStyle = {
+    width: '100%', padding: '12px 16px',
+    border: '1px solid var(--border2)', borderRadius: 10,
+    fontFamily: 'var(--sans)', fontSize: 14,
+    background: 'var(--bg2)', color: 'var(--fg)', outline: 'none',
+    transition: 'border-color 0.15s',
+  }
+
   return (
     <>
-      <nav className="nav">
-        <Link href="/" className="nav-logo"><span className="nav-logo-dot" />AgentBoard</Link>
-      </nav>
-      <div style={{ maxWidth: 440, margin: '80px auto', padding: '0 24px' }}>
-        <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 16 }}>
-          {isLogin ? 'welcome back' : 'get started'}
+      <Navbar />
+      <div style={{ maxWidth: 460, margin: '0 auto', padding: '72px 24px' }}>
+
+        {/* Header */}
+        <div style={{ marginBottom: 36, textAlign: 'center' }}>
+          <div style={{
+            width: 56, height: 56, borderRadius: 14,
+            background: 'var(--fg)', color: 'var(--bg)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 20px',
+            fontFamily: 'var(--serif)', fontSize: 22,
+          }}>
+            A
+          </div>
+          <h1 style={{ fontFamily: 'var(--serif)', fontSize: 32, fontWeight: 400, marginBottom: 8 }}>
+            {mode === 'signup' ? 'Create your account' : 'Welcome back'}
+          </h1>
+          <p style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.7 }}>
+            {mode === 'signup'
+              ? 'Sign up free and build your AI business agent in minutes.'
+              : 'Sign in to access your AI business agents.'}
+          </p>
         </div>
-        <h1 style={{ fontFamily: 'var(--serif)', fontSize: 40, fontWeight: 600, marginBottom: 8 }}>
-          {isLogin ? 'Sign in' : 'Create account'}
-        </h1>
-        <p style={{ color: 'var(--muted)', marginBottom: 40, fontSize: 15 }}>
-          {isLogin ? 'Post tasks and hire agents.' : 'Join the AI task marketplace.'}
+
+        {/* Mode toggle */}
+        <div style={{ display: 'flex', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10, padding: 4, marginBottom: 28 }}>
+          <button
+            onClick={() => { setMode('signup'); setError(''); setSuccess('') }}
+            style={{
+              flex: 1, padding: '9px', borderRadius: 7, border: 'none', cursor: 'pointer',
+              fontFamily: 'var(--mono)', fontSize: 12,
+              background: mode === 'signup' ? 'var(--fg)' : 'transparent',
+              color: mode === 'signup' ? 'var(--bg)' : 'var(--muted)',
+              transition: 'all 0.15s',
+            }}>
+            Sign up
+          </button>
+          <button
+            onClick={() => { setMode('signin'); setError(''); setSuccess('') }}
+            style={{
+              flex: 1, padding: '9px', borderRadius: 7, border: 'none', cursor: 'pointer',
+              fontFamily: 'var(--mono)', fontSize: 12,
+              background: mode === 'signin' ? 'var(--fg)' : 'transparent',
+              color: mode === 'signin' ? 'var(--bg)' : 'var(--muted)',
+              transition: 'all 0.15s',
+            }}>
+            Sign in
+          </button>
+        </div>
+
+        {/* Form */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 20 }}>
+          <div>
+            <label style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 8, letterSpacing: 0.5 }}>
+              Email address
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="you@example.com"
+              style={inputStyle}
+              autoFocus
+            />
+          </div>
+          <div>
+            <label style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 8, letterSpacing: 0.5 }}>
+              Password
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Min. 6 characters"
+              style={inputStyle}
+            />
+          </div>
+        </div>
+
+        {/* Error */}
+        {error && (
+          <div style={{ background: '#2a0a0a', border: '1px solid #4a1a1a', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontFamily: 'var(--mono)', fontSize: 12, color: '#f87171' }}>
+            ✗ {error}
+          </div>
+        )}
+
+        {/* Success */}
+        {success && (
+          <div style={{ background: '#0d2e14', border: '1px solid #1a4a24', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontFamily: 'var(--mono)', fontSize: 12, color: '#4ade80' }}>
+            ✓ {success}
+          </div>
+        )}
+
+        {/* Submit */}
+        <button
+          onClick={handleAuth}
+          disabled={loading || !email || !password}
+          className="btn btn-accent"
+          style={{ width: '100%', fontSize: 14, padding: '13px', opacity: (loading || !email || !password) ? 0.5 : 1 }}>
+          {loading ? 'Please wait...' : mode === 'signup' ? 'Create account →' : 'Sign in →'}
+        </button>
+
+        <p style={{ textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', marginTop: 20 }}>
+          {mode === 'signup' ? 'Already have an account?' : 'Don\'t have an account?'}{' '}
+          <button
+            onClick={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); setError(''); setSuccess('') }}
+            style={{ background: 'none', border: 'none', color: 'var(--fg)', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 11, textDecoration: 'underline' }}>
+            {mode === 'signup' ? 'Sign in' : 'Sign up free'}
+          </button>
         </p>
 
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label className="label">email</label>
-            <input className="input" type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} required />
-          </div>
-          <div className="form-group">
-            <label className="label">password</label>
-            <input className="input" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required />
-          </div>
-
-          {message && <p className={isError ? 'error' : 'success'}>{message}</p>}
-
-          <button type="submit" className="btn btn-dark" disabled={loading}
-            style={{ width: '100%', fontSize: 14, padding: 14, opacity: loading ? 0.6 : 1, marginBottom: 16 }}>
-            {loading ? 'Loading...' : isLogin ? 'Sign in →' : 'Create account →'}
-          </button>
-        </form>
-
-        <p style={{ textAlign: 'center', fontSize: 14, color: 'var(--muted)' }}>
-          {isLogin ? "Don't have an account? " : 'Already have an account? '}
-          <button onClick={() => setIsLogin(!isLogin)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontSize: 14, color: 'var(--fg)' }}>
-            {isLogin ? 'Sign up' : 'Sign in'}
-          </button>
+        <p style={{ textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', marginTop: 12 }}>
+          Free to use · No credit card required
         </p>
       </div>
     </>
