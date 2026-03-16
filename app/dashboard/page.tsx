@@ -94,92 +94,265 @@ export default function DashboardPage() {
           <span className="page-title">Dashboard</span>
         </div>
 
-        <div className="app-content">
+        <div style={{ width: '100%', padding: '32px 40px' }}>
 
-          <div style={{ marginBottom: 28 }}>
-            <h1 style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.3px', marginBottom: 4 }}>
-              Welcome back{user?.user_metadata?.full_name ? `, ${user.user_metadata.full_name.split(' ')[0]}` : ''}
-            </h1>
-            <p style={{ fontSize: 13, color: 'var(--fg3)' }}>
-              {businessAgents.length === 0
-                ? 'Build your first AI agent to get started.'
-                : `You have ${businessAgents.length} active AI agent${businessAgents.length > 1 ? 's' : ''}.`}
-            </p>
+          {/* Welcome banner — full width */}
+          <div style={{
+            width: '100%',
+            background: 'var(--bg2)',
+            border: '1px solid var(--border)',
+            borderRadius: 12,
+            padding: '28px 36px',
+            marginBottom: 24,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 16,
+          }}>
+            <div>
+              <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.5px', marginBottom: 6, color: 'var(--fg)' }}>
+                Welcome back{user?.user_metadata?.full_name ? `, ${user.user_metadata.full_name.split(' ')[0]}` : ''} 👋
+              </div>
+              <div style={{ fontSize: 14, color: 'var(--fg3)' }}>
+                {businessAgents.length === 0
+                  ? 'Build your first AI agent to get started.'
+                  : `You have ${businessAgents.length} active AI agent${businessAgents.length > 1 ? 's' : ''} running.`}
+              </div>
+            </div>
+            <Link href="/builder" className="btn btn-accent btn-lg">
+              + Build new agent
+            </Link>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10, marginBottom: 32 }}>
+          {/* Stats — full width 4 columns */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: 16,
+            marginBottom: 32,
+          }}>
             {[
-              { label: 'AI Agents', value: businessAgents.length, color: 'var(--accent)' },
-              { label: 'Plan', value: 'Free', color: 'var(--blue)' },
-              { label: 'Status', value: 'Active', color: 'var(--green)' },
-              { label: 'Member since', value: user?.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—', color: 'var(--fg2)' },
+              {
+                label: 'AI Agents',
+                value: businessAgents.length,
+                color: 'var(--accent)',
+                icon: <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>,
+              },
+              {
+                label: 'Plan',
+                value: 'Free',
+                color: 'var(--blue)',
+                icon: <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>,
+              },
+              {
+                label: 'Status',
+                value: 'Active',
+                color: 'var(--green)',
+                icon: <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>,
+              },
+              {
+                label: 'Member since',
+                value: user?.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—',
+                color: 'var(--fg2)',
+                icon: <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>,
+              },
             ].map(stat => (
-              <div key={stat.label} className="card-sm">
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--fg3)', marginBottom: 6 }}>{stat.label}</div>
-                <div style={{ fontSize: 18, fontWeight: 600, color: stat.color }}>{stat.value}</div>
+              <div key={stat.label} style={{
+                background: 'var(--bg2)',
+                border: '1px solid var(--border)',
+                borderRadius: 10,
+                padding: '20px 24px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 16,
+              }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: 10,
+                  background: 'var(--bg3)', border: '1px solid var(--border2)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: stat.color, flexShrink: 0,
+                }}>
+                  {stat.icon}
+                </div>
+                <div>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--fg3)', marginBottom: 4 }}>
+                    {stat.label}
+                  </div>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: stat.color, lineHeight: 1 }}>
+                    {stat.value}
+                  </div>
+                </div>
               </div>
             ))}
           </div>
 
-          <div style={{ marginBottom: 12 }}>
-            <span className="section-title">My AI Agents</span>
+          {/* Agents section — full width */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 16,
+          }}>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--fg)', marginBottom: 2 }}>My AI Agents</div>
+              <div style={{ fontSize: 13, color: 'var(--fg3)' }}>{businessAgents.length} agent{businessAgents.length !== 1 ? 's' : ''} total</div>
+            </div>
           </div>
 
           {businessAgents.length === 0 ? (
-            <div className="card">
-              <div className="empty-state">
-                <div className="empty-state-icon">
-                  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
-                  </svg>
-                </div>
-                <div className="empty-state-title">No agents yet</div>
-                <div className="empty-state-desc">Build your first AI agent and put your business on autopilot in minutes.</div>
-                <Link href="/builder" className="btn btn-accent" style={{ marginTop: 4 }}>
-                  Build first agent →
-                </Link>
+            <div style={{
+              width: '100%',
+              background: 'var(--bg2)',
+              border: '1px solid var(--border)',
+              borderRadius: 12,
+              padding: '80px 40px',
+              textAlign: 'center',
+            }}>
+              <div style={{
+                width: 52, height: 52, borderRadius: 12,
+                background: 'var(--bg3)', border: '1px solid var(--border2)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'var(--fg3)', margin: '0 auto 20px',
+              }}>
+                <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
+                </svg>
               </div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--fg2)', marginBottom: 8 }}>No agents yet</div>
+              <div style={{ fontSize: 14, color: 'var(--fg3)', marginBottom: 24, maxWidth: 360, margin: '0 auto 24px' }}>
+                Build your first AI agent and put your business on autopilot in minutes.
+              </div>
+              <Link href="/builder" className="btn btn-accent btn-lg">
+                Build first agent →
+              </Link>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10 }}>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+              gap: 16,
+            }}>
               {businessAgents.map(ba => (
-                <div key={ba.id} className="card" style={{ cursor: 'pointer' }}
-                  onClick={() => router.push(`/agent/${ba.id}`)}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                    <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--bg4)', border: '1px solid var(--border2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 13, color: 'var(--fg2)', flexShrink: 0 }}>
+                <div key={ba.id}
+                  style={{
+                    background: 'var(--bg2)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 12,
+                    padding: '20px 24px',
+                    cursor: 'pointer',
+                    transition: 'border-color 0.15s',
+                  }}
+                  onClick={() => router.push(`/agent/${ba.id}`)}
+                  onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border3)'}
+                  onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)'}>
+
+                  {/* Agent header */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
+                    <div style={{
+                      width: 44, height: 44, borderRadius: 10,
+                      background: 'var(--bg4)', border: '1px solid var(--border2)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontFamily: 'var(--mono)', fontSize: 18, color: 'var(--fg)', flexShrink: 0, fontWeight: 600,
+                    }}>
                       {ba.agent_name?.[0]}
                     </div>
                     <div style={{ flex: 1, overflow: 'hidden' }}>
-                      <div style={{ fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ba.agent_name}</div>
-                      <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--fg3)' }}>{ba.industry}</div>
+                      <div style={{ fontSize: 15, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 2 }}>
+                        {ba.agent_name}
+                      </div>
+                      <div style={{ fontSize: 13, color: 'var(--fg3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {ba.business_name}
+                      </div>
                     </div>
-                    <div className="badge badge-green">
+                    <div className="badge badge-green" style={{ flexShrink: 0 }}>
                       <span className="status-dot green" />
                       active
                     </div>
                   </div>
-                  <div style={{ fontSize: 12, color: 'var(--fg3)', marginBottom: 12 }}>{ba.business_name}</div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTop: '1px solid var(--border)' }}>
-                    <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--fg3)' }}>
-                      {ba.automations?.length || 0} automations
-                    </span>
-                    <div style={{ display: 'flex', gap: 4 }} onClick={e => e.stopPropagation()}>
-                      <Link href={`/agent/${ba.id}/manage`} className="btn btn-ghost btn-sm" style={{ fontSize: 11 }} onClick={e => e.stopPropagation()}>
-                        Manage
-                      </Link>
-                      <button onClick={e => { e.stopPropagation(); setDeleteModal({ id: ba.id, name: ba.agent_name }); setDeleteConfirmText('') }} className="btn btn-ghost btn-sm" style={{ color: 'var(--red)', fontSize: 11 }}>
-                        Delete
-                      </button>
-                    </div>
+
+                  {/* Meta row */}
+                  <div style={{
+                    display: 'flex', gap: 20, marginBottom: 16,
+                    padding: '12px 16px',
+                    background: 'var(--bg3)', borderRadius: 8,
+                    border: '1px solid var(--border)',
+                  }}>
+                    {[
+                      { label: 'Industry', value: ba.industry || '—' },
+                      { label: 'Tone', value: ba.tone || '—' },
+                      { label: 'Automations', value: ba.automations?.length || 0 },
+                    ].map(item => (
+                      <div key={item.label} style={{ flex: 1 }}>
+                        <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--fg3)', marginBottom: 3, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                          {item.label}
+                        </div>
+                        <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {item.value}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Actions */}
+                  <div style={{
+                    display: 'flex', gap: 8,
+                    paddingTop: 14, borderTop: '1px solid var(--border)',
+                  }} onClick={e => e.stopPropagation()}>
+                    <button
+                      onClick={() => router.push(`/agent/${ba.id}`)}
+                      className="btn btn-primary btn-sm"
+                      style={{ flex: 1, fontSize: 12 }}>
+                      Open agent
+                    </button>
+                    <Link
+                      href={`/agent/${ba.id}/manage`}
+                      className="btn btn-outline btn-sm"
+                      style={{ flex: 1, fontSize: 12, textAlign: 'center' }}
+                      onClick={e => e.stopPropagation()}>
+                      Manage
+                    </Link>
+                    <Link
+                      href={`/agent/${ba.id}/analytics`}
+                      className="btn btn-outline btn-sm"
+                      style={{ flex: 1, fontSize: 12, textAlign: 'center' }}
+                      onClick={e => e.stopPropagation()}>
+                      Analytics
+                    </Link>
+                    <button
+                      onClick={e => { e.stopPropagation(); setDeleteModal({ id: ba.id, name: ba.agent_name }); setDeleteConfirmText('') }}
+                      className="btn btn-ghost btn-sm"
+                      style={{ color: 'var(--red)', fontSize: 12, flexShrink: 0 }}>
+                      Delete
+                    </button>
                   </div>
                 </div>
               ))}
 
-              <Link href="/builder" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--border2)', borderRadius: 8, padding: 24, textDecoration: 'none', color: 'var(--fg3)', gap: 6, transition: 'all 0.15s', minHeight: 120 }}
+              {/* New agent card */}
+              <Link href="/builder" style={{
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center',
+                border: '1px dashed var(--border2)', borderRadius: 12,
+                padding: 32, textDecoration: 'none',
+                color: 'var(--fg3)', gap: 10,
+                transition: 'all 0.15s', minHeight: 180,
+              }}
                 onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = 'var(--border3)'; (e.currentTarget as HTMLAnchorElement).style.color = 'var(--fg2)' }}
                 onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = 'var(--border2)'; (e.currentTarget as HTMLAnchorElement).style.color = 'var(--fg3)' }}>
-                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-                <span style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>New agent</span>
+                <div style={{
+                  width: 44, height: 44, borderRadius: 10,
+                  border: '1px dashed var(--border3)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                    <path d="M12 5v14M5 12h14"/>
+                  </svg>
+                </div>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 500, textAlign: 'center', marginBottom: 4 }}>New agent</div>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 11, textAlign: 'center' }}>Build in 5 minutes</div>
+                </div>
               </Link>
             </div>
           )}
