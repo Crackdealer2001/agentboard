@@ -12,11 +12,13 @@ export default function DashboardPage() {
   const [deleteModal, setDeleteModal] = useState<{ id: string; name: string } | null>(null)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [user, setUser] = useState<any>(null)
 
   useEffect(() => {
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/auth'); return }
+      setUser(user)
 
       const { data: ba } = await supabase
         .from('business_agents')
@@ -130,13 +132,42 @@ export default function DashboardPage() {
       )}
 
       <div className="page">
-        <div style={{ marginBottom: 48 }}>
-          <div className="section-label">account</div>
-          <h1 style={{ fontFamily: 'var(--serif)', fontSize: 48, fontWeight: 400, marginBottom: 8 }}>My Dashboard</h1>
-          <p style={{ color: 'var(--muted)', fontSize: 15 }}>Your AI business agents.</p>
+
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 48, flexWrap: 'wrap', gap: 16 }}>
+          <div>
+            <div className="section-label">account</div>
+            <h1 style={{ fontFamily: 'var(--serif)', fontSize: 48, fontWeight: 400, marginBottom: 8 }}>My Dashboard</h1>
+            <p style={{ color: 'var(--muted)', fontSize: 15 }}>
+              Welcome back, <strong>{user?.user_metadata?.full_name || user?.email?.split('@')[0]}</strong>
+            </p>
+          </div>
+          <Link href="/settings" className="btn btn-outline" style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+            Settings
+          </Link>
         </div>
 
-        {/* My AI Agent Programs */}
+        {/* Stats strip */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12, marginBottom: 48 }}>
+          {[
+            { label: 'AI Agents', value: businessAgents.length, icon: <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>, color: '#c8f135' },
+            { label: 'Active', value: businessAgents.filter(a => a.id).length, icon: <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>, color: '#4ade80' },
+            { label: 'Plan', value: 'Free', icon: <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>, color: '#3b82f6' },
+            { label: 'Member since', value: user?.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—', icon: <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>, color: '#f59e0b' },
+          ].map(stat => (
+            <div key={stat.label} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px' }}>
+              <div style={{ color: stat.color, marginBottom: 10 }}>{stat.icon}</div>
+              <div style={{ fontFamily: 'var(--serif)', fontSize: 22, fontWeight: 400, marginBottom: 2 }}>{stat.value}</div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--muted)', letterSpacing: 1 }}>{stat.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* My AI Agents */}
         <div style={{ marginBottom: 56 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
             <h2 style={{ fontFamily: 'var(--serif)', fontSize: 28, fontWeight: 400 }}>My AI Agents</h2>
@@ -145,7 +176,11 @@ export default function DashboardPage() {
 
           {businessAgents.length === 0 ? (
             <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: '60px 40px', textAlign: 'center' }}>
-              <div style={{ fontSize: 40, marginBottom: 16 }}>🤖</div>
+              <div style={{ marginBottom: 16, color: 'var(--muted)' }}>
+                <svg width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1" viewBox="0 0 24 24" style={{ margin: '0 auto', display: 'block' }}>
+                  <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
+                </svg>
+              </div>
               <h3 style={{ fontFamily: 'var(--serif)', fontSize: 22, fontWeight: 400, marginBottom: 8 }}>No agents yet</h3>
               <p style={{ color: 'var(--muted)', fontFamily: 'var(--mono)', fontSize: 13, marginBottom: 24 }}>
                 Build your first AI agent and put your business on autopilot.
@@ -160,12 +195,7 @@ export default function DashboardPage() {
                 <div key={ba.id} style={{ position: 'relative' }}>
                   <Link href={`/agent/${ba.id}`} className="card" style={{ display: 'block', paddingBottom: 52, textDecoration: 'none' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                      <div style={{
-                        width: 40, height: 40, borderRadius: 10,
-                        background: 'var(--fg)', color: 'var(--bg)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontFamily: 'var(--serif)', fontSize: 18,
-                      }}>
+                      <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--fg)', color: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--serif)', fontSize: 18 }}>
                         {ba.agent_name?.[0]}
                       </div>
                       <div>
@@ -205,12 +235,34 @@ export default function DashboardPage() {
                 onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.borderColor = 'var(--fg)'}
                 onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.borderColor = 'var(--border2)'}
               >
-                <div style={{ fontSize: 28, marginBottom: 10 }}>+</div>
+                <div style={{ fontSize: 28, marginBottom: 10, color: 'var(--muted)' }}>+</div>
                 <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--muted)' }}>Build new agent</div>
               </Link>
             </div>
           )}
         </div>
+
+        {/* Quick links */}
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 40 }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 20 }}>Quick links</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+            {[
+              { label: 'Build new agent', href: '/builder', icon: <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>, desc: 'Create a new AI agent' },
+              { label: 'Account settings', href: '/settings', icon: <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>, desc: 'Profile, security, billing' },
+              { label: 'Security', href: '/settings?tab=security', icon: <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>, desc: 'Password and sessions' },
+              { label: 'Privacy', href: '/settings?tab=privacy', icon: <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>, desc: 'Data and permissions' },
+            ].map(link => (
+              <Link key={link.label} href={link.href} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px', textDecoration: 'none', display: 'block', transition: 'border-color 0.15s' }}
+                onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.borderColor = 'var(--fg)'}
+                onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.borderColor = 'var(--border)'}>
+                <div style={{ color: 'var(--muted)', marginBottom: 10 }}>{link.icon}</div>
+                <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 4, color: 'var(--fg)' }}>{link.label}</div>
+                <div style={{ fontSize: 12, color: 'var(--muted)' }}>{link.desc}</div>
+              </Link>
+            ))}
+          </div>
+        </div>
+
       </div>
     </>
   )
