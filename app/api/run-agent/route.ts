@@ -28,7 +28,6 @@ export async function POST(req: Request) {
     return NextResponse.json({
       result: data.content?.[0]?.text || "No result returned"
     })
-
   } catch (error) {
     return NextResponse.json({ error: "Agent failed" }, { status: 500 })
   }
