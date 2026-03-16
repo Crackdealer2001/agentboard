@@ -208,7 +208,14 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => setView(view === 'home' ? 'chat' : 'home')} className="btn btn-outline" style={{ fontSize: 12 }}>
+            <button
+              onClick={() => router.push(`/agent/${agent.id as string}/manage`)}
+              className="btn btn-outline" style={{ fontSize: 12 }}>
+              ⚙ Manage
+            </button>
+            <button
+              onClick={() => setView(view === 'home' ? 'chat' : 'home')}
+              className="btn btn-outline" style={{ fontSize: 12 }}>
               {view === 'home' ? '💬 Open chat' : '⊞ Dashboard'}
             </button>
             <button onClick={() => router.push('/dashboard')} className="btn btn-outline" style={{ fontSize: 12 }}>← Back</button>
@@ -228,9 +235,17 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
                 <h2 style={{ fontFamily: 'var(--serif)', fontSize: 28, fontWeight: 400, marginBottom: 6 }}>What do you need done today?</h2>
                 <p style={{ fontSize: 14, opacity: 0.6, maxWidth: 400 }}>Pick an action below or chat directly. No technical knowledge needed.</p>
               </div>
-              <button onClick={() => startAction(QUICK_ACTIONS[11])} className="btn btn-accent" style={{ fontSize: 13, padding: '12px 24px' }}>
-                Start chatting →
-              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <button onClick={() => startAction(QUICK_ACTIONS[11])} className="btn btn-accent" style={{ fontSize: 13, padding: '12px 24px' }}>
+                  Start chatting →
+                </button>
+                <button
+                  onClick={() => router.push(`/agent/${agent.id as string}/manage`)}
+                  className="btn btn-outline"
+                  style={{ fontSize: 12, padding: '10px 24px', color: 'var(--bg)', borderColor: 'rgba(255,255,255,0.2)' }}>
+                  ⚙ Manage agent
+                </button>
+              </div>
             </div>
 
             <div style={{ marginBottom: 28 }}>

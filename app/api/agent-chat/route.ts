@@ -11,6 +11,30 @@ export async function POST(req: NextRequest) {
     dueDate.setDate(dueDate.getDate() + 30)
     const formatDate = (d: Date) => d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
 
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+
+    // Load memory, knowledge base and contacts in parallel
+    const [{ data: memories }, { data: knowledge }, { data: contacts }] = await Promise.all([
+      supabase.from('agent_memory').select('*').eq('business_agent_id', agent.id).order('updated_at', { ascending: false }),
+      supabase.from('knowledge_base').select('*').eq('business_agent_id', agent.id),
+      supabase.from('contacts').select('*').eq('business_agent_id', agent.id),
+    ])
+
+    const memoryContext = memories?.length ? `
+WHAT I REMEMBER ABOUT THIS BUSINESS:
+${memories.map((m: Record<string, unknown>) => `- ${m.key}: ${m.value}`).join('\n')}` : ''
+
+    const knowledgeContext = knowledge?.length ? `
+BUSINESS KNOWLEDGE BASE:
+${knowledge.map((k: Record<string, unknown>) => `[${k.type}] ${k.title}: ${k.content}`).join('\n')}` : ''
+
+    const contactsContext = contacts?.length ? `
+KNOWN CUSTOMERS & CONTACTS:
+${contacts.map((c: Record<string, unknown>) => `- ${c.name}${c.email ? ` (${c.email})` : ''}${c.company ? ` at ${c.company}` : ''}${c.notes ? ` — ${c.notes}` : ''}`).join('\n')}` : ''
+
     const buildDocumentHTML = (type: string, content: string, metadata: Record<string, unknown>) => {
       const docNumber = `DOC-${Date.now().toString().slice(-6)}`
       return `<!DOCTYPE html>
@@ -20,8 +44,6 @@ export async function POST(req: NextRequest) {
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f3f4f6;padding:48px 24px;">
 <tr><td align="center">
 <table width="680" cellpadding="0" cellspacing="0" border="0" style="background:#ffffff;border-radius:16px;overflow:hidden;">
-
-  <!-- HEADER -->
   <tr>
     <td style="background:#0a0a0a;padding:40px 48px;">
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -32,7 +54,7 @@ export async function POST(req: NextRequest) {
           </td>
           <td align="right" valign="top">
             <div style="color:#9ca3af;font-size:10px;letter-spacing:2px;text-transform:uppercase;font-family:monospace;margin-bottom:8px;">DOCUMENT</div>
-            <div style="color:#ffffff;font-size:22px;font-weight:800;letter-spacing:-0.5px;">${type}</div>
+            <div style="color:#ffffff;font-size:22px;font-weight:800;">${type}</div>
             <div style="margin-top:10px;">
               <span style="background:#c8f135;color:#0a0a0a;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:5px 14px;border-radius:20px;font-family:monospace;">${docNumber}</span>
             </div>
@@ -41,8 +63,6 @@ export async function POST(req: NextRequest) {
       </table>
     </td>
   </tr>
-
-  <!-- DATE BAR -->
   <tr>
     <td style="background:#111111;padding:18px 48px;">
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -51,14 +71,8 @@ export async function POST(req: NextRequest) {
             <div style="color:#6b7280;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:5px;">DATE</div>
             <div style="color:#ffffff;font-size:13px;font-weight:500;">${formatDate(today)}</div>
           </td>
-          ${metadata?.party1 ? `<td>
-            <div style="color:#6b7280;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:5px;">PARTY 1</div>
-            <div style="color:#ffffff;font-size:13px;font-weight:500;">${metadata.party1}</div>
-          </td>` : ''}
-          ${metadata?.party2 ? `<td>
-            <div style="color:#6b7280;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:5px;">PARTY 2</div>
-            <div style="color:#c8f135;font-size:13px;font-weight:600;">${metadata.party2}</div>
-          </td>` : ''}
+          ${metadata?.party1 ? `<td><div style="color:#6b7280;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:5px;">PARTY 1</div><div style="color:#ffffff;font-size:13px;font-weight:500;">${metadata.party1}</div></td>` : ''}
+          ${metadata?.party2 ? `<td><div style="color:#6b7280;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:5px;">PARTY 2</div><div style="color:#c8f135;font-size:13px;font-weight:600;">${metadata.party2}</div></td>` : ''}
           <td align="right">
             <div style="color:#6b7280;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:5px;">PREPARED BY</div>
             <div style="color:#ffffff;font-size:13px;font-weight:500;">${agent.agent_name}</div>
@@ -67,22 +81,9 @@ export async function POST(req: NextRequest) {
       </table>
     </td>
   </tr>
-
-  <!-- BODY -->
   <tr>
     <td style="padding:40px 48px;background:#ffffff;">
-
-      ${metadata?.title ? `
-      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:32px;">
-        <tr>
-          <td style="background:#f9fafb;border-left:4px solid #0a0a0a;padding:18px 24px;border-radius:0 8px 8px 0;">
-            <div style="color:#9ca3af;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:8px;">SUBJECT</div>
-            <div style="color:#0a0a0a;font-size:18px;font-weight:700;">${metadata.title}</div>
-          </td>
-        </tr>
-      </table>` : ''}
-
-      <!-- CONTENT -->
+      ${metadata?.title ? `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:32px;"><tr><td style="background:#f9fafb;border-left:4px solid #0a0a0a;padding:18px 24px;border-radius:0 8px 8px 0;"><div style="color:#9ca3af;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:8px;">SUBJECT</div><div style="color:#0a0a0a;font-size:18px;font-weight:700;">${metadata.title}</div></td></tr></table>` : ''}
       <div style="font-size:14px;line-height:1.9;color:#374151;">
         ${content
           .replace(/\*\*(.*?)\*\*/g, '<strong style="color:#0a0a0a;font-weight:700;">$1</strong>')
@@ -92,30 +93,21 @@ export async function POST(req: NextRequest) {
           .replace(/\n/g, '<br>')
         }
       </div>
-
-      <!-- SIGNATURE BLOCK -->
       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:48px;">
         <tr>
           <td width="45%" style="padding:20px 0 0;">
             <div style="border-top:2px solid #0a0a0a;padding-top:10px;">
               <div style="font-size:12px;color:#6b7280;font-family:monospace;">SIGNATURE — ${agent.business_name}</div>
               <div style="font-size:13px;color:#0a0a0a;margin-top:4px;font-weight:600;">Authorised Representative</div>
+              <div style="margin-top:24px;font-size:12px;color:#9ca3af;">Date: _______________</div>
             </div>
           </td>
           <td width="10%"></td>
-          ${metadata?.party2 ? `<td width="45%" style="padding:20px 0 0;">
-            <div style="border-top:2px solid #0a0a0a;padding-top:10px;">
-              <div style="font-size:12px;color:#6b7280;font-family:monospace;">SIGNATURE — ${metadata.party2}</div>
-              <div style="font-size:13px;color:#0a0a0a;margin-top:4px;font-weight:600;">Authorised Representative</div>
-            </div>
-          </td>` : ''}
+          ${metadata?.party2 ? `<td width="45%" style="padding:20px 0 0;"><div style="border-top:2px solid #0a0a0a;padding-top:10px;"><div style="font-size:12px;color:#6b7280;font-family:monospace;">SIGNATURE — ${metadata.party2}</div><div style="font-size:13px;color:#0a0a0a;margin-top:4px;font-weight:600;">Authorised Representative</div><div style="margin-top:24px;font-size:12px;color:#9ca3af;">Date: _______________</div></div></td>` : ''}
         </tr>
       </table>
-
     </td>
   </tr>
-
-  <!-- FOOTER -->
   <tr>
     <td style="background:#f9fafb;padding:24px 48px;border-top:2px solid #0a0a0a;">
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -132,7 +124,6 @@ export async function POST(req: NextRequest) {
       </table>
     </td>
   </tr>
-
 </table>
 </td></tr>
 </table>
@@ -143,92 +134,87 @@ export async function POST(req: NextRequest) {
     const systemPrompt = `You are ${agent.agent_name}, a professional AI business agent for ${agent.business_name}.
 Industry: ${agent.industry}
 Tone: ${agent.tone}
-
-You are concise, professional, and action-oriented. You complete tasks immediately.
+${agent.system_prompt || ''}
 
 TODAY: ${formatDate(today)}
 DUE DATE (invoices): ${formatDate(dueDate)}
 
+${memoryContext}
+${knowledgeContext}
+${contactsContext}
+
+MEMORY INSTRUCTIONS:
+When you learn new important information about the business, customers, pricing, or preferences, save it by adding at the end:
+[REMEMBER:category:key:value]
+Categories: customer, pricing, product, preference, general
+Example: [REMEMBER:customer:John Smith email:john@example.com]
+Example: [REMEMBER:pricing:standard hourly rate:$150]
+Example: [REMEMBER:preference:invoice payment terms:Net 14]
+
+CONTACT INSTRUCTIONS:
+When you encounter a new customer, save them:
+[ADD_CONTACT:name:email:company:notes]
+Example: [ADD_CONTACT:John Smith:john@example.com:ABC Corp:Prefers email contact]
+
 RULES:
-- Be brief and professional. No ** markdown bold.
+- Be brief and professional. No ** markdown.
 - Use plain text only in document content
-- Use clear headings with # for sections
+- Use # for section headings
 - Use - for bullet points
-- Keep documents focused and concise
+- Always use memory when available — never ask for info you already know
 - Confirm task in ONE line at the end
 
 INVOICE FORMAT:
-When creating an invoice respond with ONLY this structure:
-
 INVOICE #[NUMBER]
 Bill To: [client name]
-
-[Item description] | [qty] | $[rate] | $[amount]
-
+[Item] | [qty] | $[rate] | $[amount]
 Subtotal: $[amount]
 Tax (10%): $[amount]
 Total Due: $[amount]
-
-Then add: [SEND_INVOICE:email:invoiceNumber:clientName:subtotal:tax:total:desc|qty|rate|amount]
+[SEND_INVOICE:email:invoiceNumber:clientName:subtotal:tax:total:desc|qty|rate|amount]
 
 CONTRACT FORMAT:
-Write a clean professional contract with these sections:
 # Parties
-# Services
+# Services  
 # Terms
 # Payment
 # Termination
-# Governing Law
 # Signatures
-
-Then add: [CREATE_DOCUMENT:CONTRACT:title|party1|party2]
+[CREATE_DOCUMENT:CONTRACT:title|party1|party2]
 
 PROPOSAL FORMAT:
-Write with these sections:
 # Executive Summary
 # Scope of Work
 # Timeline
 # Investment
 # Next Steps
-
-Then add: [CREATE_DOCUMENT:PROPOSAL:title|clientName|date]
+[CREATE_DOCUMENT:PROPOSAL:title|clientName|date]
 
 REPORT FORMAT:
-Write with these sections:
 # Overview
 # Key Metrics
 # Highlights
 # Challenges
 # Recommendations
-
-Then add: [CREATE_DOCUMENT:REPORT:title|period|date]
+[CREATE_DOCUMENT:REPORT:title|period|date]
 
 MEETING AGENDA FORMAT:
-Write with these sections:
 # Meeting Details
 # Attendees
 # Agenda Items
 # Action Items
-
-Then add: [CREATE_DOCUMENT:MEETING AGENDA:title|organizer|date]
+[CREATE_DOCUMENT:MEETING AGENDA:title|organizer|date]
 
 JOB LISTING FORMAT:
-Write with these sections:
 # About the Role
 # Responsibilities
 # Requirements
 # What We Offer
 # How to Apply
-
-Then add: [CREATE_DOCUMENT:JOB LISTING:title|company|date]
+[CREATE_DOCUMENT:JOB LISTING:title|company|date]
 
 EMAIL FORMAT:
-Keep emails SHORT - max 5 lines.
-Then add: [SEND_EMAIL:email:subject]
-
-GENERAL:
-- Professional = short and clear
-- Always confirm in one line what you did`
+Max 5 lines. Then: [SEND_EMAIL:email:subject]`
 
     const conversationHistory = history.slice(-10).map((msg: { role: string; content: string }) => ({
       role: msg.role,
@@ -256,6 +242,36 @@ GENERAL:
     let documentId = null
     let documentType = null
     let invoiceHTML = null
+
+    // Save memories
+    const memoryMatches = [...reply.matchAll(/\[REMEMBER:([^:]+):([^:]+):([^\]]+)\]/g)]
+    if (memoryMatches.length > 0) {
+      for (const match of memoryMatches) {
+        await supabase.from('agent_memory').upsert({
+          business_agent_id: agent.id,
+          category: match[1].trim(),
+          key: match[2].trim(),
+          value: match[3].trim(),
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'business_agent_id,key' })
+      }
+      reply = reply.replace(/\[REMEMBER:[^\]]+\]/g, '').trim()
+    }
+
+    // Save new contacts
+    const contactMatches = [...reply.matchAll(/\[ADD_CONTACT:([^:]+):([^:]*):([^:]*):([^\]]*)\]/g)]
+    if (contactMatches.length > 0) {
+      for (const match of contactMatches) {
+        await supabase.from('contacts').insert({
+          business_agent_id: agent.id,
+          name: match[1].trim(),
+          email: match[2].trim(),
+          company: match[3].trim(),
+          notes: match[4].trim(),
+        })
+      }
+      reply = reply.replace(/\[ADD_CONTACT:[^\]]+\]/g, '').trim()
+    }
 
     // Handle invoice
     const invoiceMatch = reply.match(/\[SEND_INVOICE:([^\]]+)\]/)
@@ -313,22 +329,10 @@ GENERAL:
     <td style="background:#111111;padding:18px 48px;">
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
-          <td>
-            <div style="color:#6b7280;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:5px;">ISSUE DATE</div>
-            <div style="color:#ffffff;font-size:13px;font-weight:500;">${formatDate(today)}</div>
-          </td>
-          <td>
-            <div style="color:#6b7280;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:5px;">DUE DATE</div>
-            <div style="color:#c8f135;font-size:13px;font-weight:600;">${formatDate(dueDate)}</div>
-          </td>
-          <td>
-            <div style="color:#6b7280;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:5px;">STATUS</div>
-            <div style="color:#fbbf24;font-size:13px;font-weight:600;">Unpaid</div>
-          </td>
-          <td align="right">
-            <div style="color:#6b7280;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:5px;">TERMS</div>
-            <div style="color:#ffffff;font-size:13px;font-weight:500;">Net 30</div>
-          </td>
+          <td><div style="color:#6b7280;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:5px;">ISSUE DATE</div><div style="color:#ffffff;font-size:13px;font-weight:500;">${formatDate(today)}</div></td>
+          <td><div style="color:#6b7280;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:5px;">DUE DATE</div><div style="color:#c8f135;font-size:13px;font-weight:600;">${formatDate(dueDate)}</div></td>
+          <td><div style="color:#6b7280;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:5px;">STATUS</div><div style="color:#fbbf24;font-size:13px;font-weight:600;">Unpaid</div></td>
+          <td align="right"><div style="color:#6b7280;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace;margin-bottom:5px;">TERMS</div><div style="color:#ffffff;font-size:13px;font-weight:500;">Net 30</div></td>
         </tr>
       </table>
     </td>
@@ -358,18 +362,9 @@ GENERAL:
           <td width="55%"></td>
           <td width="45%">
             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f9fafb;border-radius:10px;padding:20px 24px;">
-              <tr>
-                <td style="padding:5px 0;font-size:13px;color:#6b7280;">Subtotal</td>
-                <td align="right" style="padding:5px 0;font-size:13px;color:#374151;">$${subtotal}</td>
-              </tr>
-              <tr>
-                <td style="padding:5px 0 12px;font-size:13px;color:#6b7280;border-bottom:1px solid #e5e7eb;">GST / Tax (10%)</td>
-                <td align="right" style="padding:5px 0 12px;font-size:13px;color:#374151;border-bottom:1px solid #e5e7eb;">$${tax}</td>
-              </tr>
-              <tr>
-                <td style="padding-top:12px;font-size:17px;font-weight:800;color:#0a0a0a;">Total Due</td>
-                <td align="right" style="padding-top:12px;font-size:17px;font-weight:800;color:#0a0a0a;">$${total}</td>
-              </tr>
+              <tr><td style="padding:5px 0;font-size:13px;color:#6b7280;">Subtotal</td><td align="right" style="padding:5px 0;font-size:13px;color:#374151;">$${subtotal}</td></tr>
+              <tr><td style="padding:5px 0 12px;font-size:13px;color:#6b7280;border-bottom:1px solid #e5e7eb;">GST / Tax (10%)</td><td align="right" style="padding:5px 0 12px;font-size:13px;color:#374151;border-bottom:1px solid #e5e7eb;">$${tax}</td></tr>
+              <tr><td style="padding-top:12px;font-size:17px;font-weight:800;color:#0a0a0a;">Total Due</td><td align="right" style="padding-top:12px;font-size:17px;font-weight:800;color:#0a0a0a;">$${total}</td></tr>
             </table>
           </td>
         </tr>
@@ -388,14 +383,8 @@ GENERAL:
     <td style="background:#f9fafb;padding:24px 48px;border-top:2px solid #0a0a0a;">
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
-          <td>
-            <div style="font-size:14px;font-weight:700;color:#0a0a0a;margin-bottom:3px;">${agent.business_name}</div>
-            <div style="font-size:11px;color:#9ca3af;font-family:monospace;">Generated by ${agent.agent_name}</div>
-          </td>
-          <td align="right">
-            <div style="font-size:10px;color:#9ca3af;font-family:monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">AMOUNT DUE</div>
-            <div style="font-size:26px;font-weight:800;color:#0a0a0a;">$${total}</div>
-          </td>
+          <td><div style="font-size:14px;font-weight:700;color:#0a0a0a;margin-bottom:3px;">${agent.business_name}</div><div style="font-size:11px;color:#9ca3af;font-family:monospace;">Generated by ${agent.agent_name}</div></td>
+          <td align="right"><div style="font-size:10px;color:#9ca3af;font-family:monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">AMOUNT DUE</div><div style="font-size:26px;font-weight:800;color:#0a0a0a;">$${total}</div></td>
         </tr>
       </table>
     </td>
@@ -407,20 +396,12 @@ GENERAL:
 </html>`
 
       try {
-        const supabase = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        )
-        const { data: doc } = await supabase
-          .from('documents')
-          .insert({
-            agent_id: agent.id,
-            type: 'INVOICE',
-            content: invoiceHTML,
-            metadata: { invoiceNumber, clientName, subtotal, tax, total, recipientEmail, invoiceHTML },
-          })
-          .select()
-          .single()
+        const { data: doc } = await supabase.from('documents').insert({
+          agent_id: agent.id,
+          type: 'INVOICE',
+          content: invoiceHTML,
+          metadata: { invoiceNumber, clientName, subtotal, tax, total, recipientEmail, invoiceHTML },
+        }).select().single()
         if (doc) { documentId = doc.id; documentType = 'INVOICE' }
       } catch { }
 
@@ -432,10 +413,7 @@ GENERAL:
           subject: `Invoice ${invoiceNumber} from ${agent.business_name}`,
           html: invoiceHTML,
         })
-        if (!error) {
-          emailSent = true
-          reply += `\n\nInvoice ${invoiceNumber} sent to ${recipientEmail}.`
-        }
+        if (!error) { emailSent = true; reply += `\n\nInvoice ${invoiceNumber} sent to ${recipientEmail}.` }
       } catch { }
     }
 
@@ -458,18 +436,12 @@ GENERAL:
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
           <td><div style="color:#ffffff;font-size:17px;font-weight:700;">${agent.business_name}</div></td>
-          <td align="right">
-            <span style="background:#c8f135;color:#0a0a0a;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:5px 12px;border-radius:20px;font-family:monospace;">Message</span>
-          </td>
+          <td align="right"><span style="background:#c8f135;color:#0a0a0a;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:5px 12px;border-radius:20px;font-family:monospace;">Message</span></td>
         </tr>
       </table>
     </td>
   </tr>
-  <tr>
-    <td style="padding:36px 40px;font-size:14px;line-height:1.8;color:#374151;">
-      ${reply.replace(/\n/g, '<br>')}
-    </td>
-  </tr>
+  <tr><td style="padding:36px 40px;font-size:14px;line-height:1.8;color:#374151;">${reply.replace(/\n/g, '<br>')}</td></tr>
   <tr>
     <td style="background:#f9fafb;padding:20px 40px;border-top:1px solid #e5e7eb;">
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -494,14 +466,11 @@ GENERAL:
           subject: emailSubject,
           html: emailHTML,
         })
-        if (!error) {
-          emailSent = true
-          reply += `\n\nEmail sent to ${recipientEmail}.`
-        }
+        if (!error) { emailSent = true; reply += `\n\nEmail sent to ${recipientEmail}.` }
       } catch { }
     }
 
-    // Handle all other documents (CONTRACT, PROPOSAL, REPORT, MEETING AGENDA, JOB LISTING etc)
+    // Handle all other documents
     const docMatch = reply.match(/\[CREATE_DOCUMENT:([^:]+):([^\]]+)\]/)
     if (docMatch && !invoiceMatch) {
       documentType = docMatch[1].trim()
@@ -518,20 +487,12 @@ GENERAL:
       const docHTML = buildDocumentHTML(documentType, reply, metadata)
 
       try {
-        const supabase = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        )
-        const { data: doc } = await supabase
-          .from('documents')
-          .insert({
-            agent_id: agent.id,
-            type: documentType,
-            content: docHTML,
-            metadata: { ...metadata, invoiceHTML: docHTML },
-          })
-          .select()
-          .single()
+        const { data: doc } = await supabase.from('documents').insert({
+          agent_id: agent.id,
+          type: documentType,
+          content: docHTML,
+          metadata: { ...metadata, invoiceHTML: docHTML },
+        }).select().single()
 
         if (doc) {
           documentId = doc.id
