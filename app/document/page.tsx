@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 import Sidebar from '@/components/Sidebar'
 import { useRouter } from 'next/navigation'
 
-export default function DocumentsPage() {
+export default function DocumentPage() {
   const router = useRouter()
   const [documents, setDocuments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -15,21 +15,14 @@ export default function DocumentsPage() {
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/auth'); return }
-
-      const { data: agents } = await supabase
-        .from('business_agents')
-        .select('id')
-        .eq('user_id', user.id)
-
+      const { data: agents } = await supabase.from('business_agents').select('id').eq('user_id', user.id)
       if (!agents?.length) { setLoading(false); return }
-
       const agentIds = agents.map((a: any) => a.id)
       const { data: docs } = await supabase
         .from('documents')
         .select('*, business_agents(agent_name, business_name)')
         .in('agent_id', agentIds)
         .order('created_at', { ascending: false })
-
       setDocuments(docs || [])
       setLoading(false)
     }
@@ -40,12 +33,8 @@ export default function DocumentsPage() {
   const filtered = filter === 'ALL' ? documents : documents.filter((d: any) => d.type === filter)
 
   const typeColors: Record<string, string> = {
-    INVOICE: '#10b981',
-    CONTRACT: '#3b82f6',
-    PROPOSAL: '#8b5cf6',
-    REPORT: '#f59e0b',
-    'MEETING AGENDA': '#ec4899',
-    'JOB LISTING': '#6b7280',
+    INVOICE: '#10b981', CONTRACT: '#3b82f6', PROPOSAL: '#8b5cf6',
+    REPORT: '#f59e0b', 'MEETING AGENDA': '#ec4899', 'JOB LISTING': '#6b7280',
   }
 
   const viewDoc = (doc: any) => {
@@ -80,11 +69,9 @@ export default function DocumentsPage() {
         <div className="modal-overlay">
           <div style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 12, width: '100%', maxWidth: 740, maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--fg3)' }}>{preview.type} PREVIEW</span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--fg3)' }}>{preview.type}</span>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => { const win = window.open('', '_blank'); if (win) { win.document.write(preview.html); win.document.close(); win.print() } }} className="btn btn-accent btn-sm">
-                  Print / PDF
-                </button>
+                <button onClick={() => { const win = window.open('', '_blank'); if (win) { win.document.write(preview.html); win.document.close(); win.print() } }} className="btn btn-accent btn-sm">Print / PDF</button>
                 <button onClick={() => setPreview(null)} className="btn btn-outline btn-sm">Close</button>
               </div>
             </div>
@@ -98,27 +85,18 @@ export default function DocumentsPage() {
       <main className="app-main">
         <div className="app-header">
           <span className="page-title">Documents</span>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-            <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--fg3)', alignSelf: 'center' }}>
-              {documents.length} total
-            </span>
-          </div>
+          <span style={{ marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--fg3)' }}>
+            {documents.length} total
+          </span>
         </div>
 
         <div className="app-content">
 
-          {/* Filter tabs */}
           {documents.length > 0 && (
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 20 }}>
               {types.map(type => (
                 <button key={type} onClick={() => setFilter(type)}
-                  style={{
-                    fontFamily: 'var(--mono)', fontSize: 11, padding: '4px 10px',
-                    borderRadius: 4, border: '1px solid var(--border2)', cursor: 'pointer',
-                    background: filter === type ? 'var(--fg)' : 'transparent',
-                    color: filter === type ? 'var(--bg)' : 'var(--fg3)',
-                    transition: 'all 0.1s',
-                  }}>
+                  style={{ fontFamily: 'var(--mono)', fontSize: 11, padding: '4px 10px', borderRadius: 4, border: '1px solid var(--border2)', cursor: 'pointer', background: filter === type ? 'var(--fg)' : 'transparent', color: filter === type ? 'var(--bg)' : 'var(--fg3)', transition: 'all 0.1s' }}>
                   {type} ({type === 'ALL' ? documents.length : documents.filter((d: any) => d.type === type).length})
                 </button>
               ))}
@@ -132,7 +110,7 @@ export default function DocumentsPage() {
                   <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
                 </div>
                 <div className="empty-state-title">No documents yet</div>
-                <div className="empty-state-desc">Documents you generate through your agents will appear here.</div>
+                <div className="empty-state-desc">Documents generated through your agents will appear here.</div>
               </div>
             </div>
           ) : (
