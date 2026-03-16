@@ -1,100 +1,104 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import Navbar from '@/components/Navbar'
 import { useRouter } from 'next/navigation'
 
+interface Message {
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: string
+  emailSent?: boolean
+}
+
 export default function AgentClient({ agent }: { agent: Record<string, unknown> }) {
   const router = useRouter()
-  const automations = agent.automations as Record<string, unknown>[]
-  const [activeAuto, setActiveAuto] = useState<Record<string, unknown>>(automations?.[0])
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      role: 'assistant',
+      content: `Hi! I'm ${agent.agent_name as string}, your AI agent for ${agent.business_name as string}. I know everything about your business and I'm ready to help.\n\nJust tell me what you need done — I can write emails and send them, handle customer inquiries, generate reports, draft documents, and much more. What would you like me to do?`,
+      timestamp: new Date().toISOString(),
+    }
+  ])
   const [input, setInput] = useState('')
-  const [customerEmail, setCustomerEmail] = useState('')
-  const [output, setOutput] = useState('')
   const [running, setRunning] = useState(false)
-  const [emailSent, setEmailSent] = useState(false)
-  const [history, setHistory] = useState<Record<string, unknown>[]>([])
-  const [status, setStatus] = useState('')
+  const bottomRef = useRef<HTMLDivElement>(null)
 
-  const runAutomation = async () => {
-    if (!input.trim() || !activeAuto) return
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  const sendMessage = async () => {
+    if (!input.trim() || running) return
+
+    const userMessage: Message = {
+      role: 'user',
+      content: input,
+      timestamp: new Date().toISOString(),
+    }
+
+    setMessages(prev => [...prev, userMessage])
+    setInput('')
     setRunning(true)
-    setOutput('')
-    setEmailSent(false)
-    setStatus('Generating response...')
 
-    const response = await fetch('/api/run-automation', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        promptTemplate: activeAuto.promptTemplate,
-        input,
-        systemPrompt: agent.system_prompt,
-      }),
-    })
-
-    const data = await response.json()
-
-    if (data.output) {
-      setOutput(data.output)
-      setStatus('Response generated!')
-
-      await supabase.from('automation_runs').insert({
-        business_agent_id: agent.id,
-        automation_type: activeAuto.title,
-        input,
-        output: data.output,
+    try {
+      const response = await fetch('/api/agent-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: input,
+          agent,
+          history: messages,
+        }),
       })
 
-      setHistory(prev => [{
-        automation_type: activeAuto.title,
-        input,
-        output: data.output,
-        created_at: new Date().toISOString()
-      }, ...prev])
+      const data = await response.json()
 
-      if (customerEmail.trim()) {
-        setStatus('Sending email to customer...')
-        const emailRes = await fetch('/api/send-automation-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            to: customerEmail,
-            subject: `${agent.business_name} — ${activeAuto.title}`,
-            body: data.output,
-            businessName: agent.business_name,
-            agentName: agent.agent_name,
-          }),
-        })
-        const emailData = await emailRes.json()
-        if (emailData.success) {
-          setEmailSent(true)
-          setStatus('Done! Email sent to customer automatically.')
-        } else {
-          setStatus('Response ready. Email could not be sent: ' + emailData.error)
-        }
-      } else {
-        setStatus('Done! Copy the response or add a customer email to send automatically.')
+      const assistantMessage: Message = {
+        role: 'assistant',
+        content: data.reply,
+        timestamp: new Date().toISOString(),
+        emailSent: data.emailSent,
       }
+
+      setMessages(prev => [...prev, assistantMessage])
+
+      await supabase.from('automation_runs').insert({
+        business_agent_id: agent.id as string,
+        automation_type: 'chat',
+        input,
+        output: data.reply,
+      })
+
+    } catch (err) {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: 'Sorry, something went wrong. Please try again.',
+        timestamp: new Date().toISOString(),
+      }])
     }
 
     setRunning(false)
   }
 
-  const copyOutput = () => {
-    navigator.clipboard.writeText(output)
-    alert('Copied!')
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      sendMessage()
+    }
   }
 
   return (
     <>
       <Navbar />
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 32px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 40 }}>
+      <div style={{ maxWidth: 800, margin: '0 auto', padding: '32px 24px', height: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column' }}>
+
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexShrink: 0 }}>
           <div>
-            <div className="section-label">your ai agent</div>
-            <h1 style={{ fontFamily: 'var(--serif)', fontSize: 40, fontWeight: 400, marginBottom: 6 }}>{agent.agent_name as string}</h1>
-            <p style={{ color: 'var(--muted)', fontSize: 15 }}>{agent.business_name as string} · {agent.industry as string}</p>
+            <div className="section-label">ai agent</div>
+            <h1 style={{ fontFamily: 'var(--serif)', fontSize: 28, fontWeight: 400 }}>{agent.agent_name as string}</h1>
+            <p style={{ color: 'var(--muted)', fontSize: 13 }}>{agent.business_name as string} · {agent.industry as string}</p>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={() => router.push('/dashboard')} className="btn btn-outline" style={{ fontSize: 12 }}>← Dashboard</button>
@@ -102,115 +106,98 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 24 }}>
-          <div>
-            <div className="label" style={{ marginBottom: 12 }}>automations</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {automations?.map((auto) => (
-                <button key={auto.id as string} onClick={() => { setActiveAuto(auto); setInput(''); setOutput(''); setEmailSent(false); setStatus('') }}
-                  style={{
-                    textAlign: 'left', padding: '14px 16px', borderRadius: 12, cursor: 'pointer',
-                    background: activeAuto?.id === auto.id ? 'var(--fg)' : 'var(--bg2)',
-                    color: activeAuto?.id === auto.id ? 'var(--bg)' : 'var(--fg)',
-                    border: `1px solid ${activeAuto?.id === auto.id ? 'var(--fg)' : 'var(--border)'}`,
-                    transition: 'all 0.15s',
-                  }}>
-                  <div style={{ fontSize: 20, marginBottom: 4 }}>{auto.icon as string}</div>
-                  <div style={{ fontFamily: 'var(--sans)', fontSize: 13, fontWeight: 500 }}>{auto.title as string}</div>
-                  <div style={{ fontFamily: 'var(--mono)', fontSize: 11, opacity: 0.6, marginTop: 2 }}>
-                    {(auto.description as string)?.slice(0, 50)}...
+        {/* Messages */}
+        <div style={{
+          flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16,
+          padding: '16px 0', marginBottom: 16
+        }}>
+          {messages.map((msg, i) => (
+            <div key={i} style={{
+              display: 'flex',
+              justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+            }}>
+              <div style={{
+                maxWidth: '80%',
+                background: msg.role === 'user' ? 'var(--fg)' : 'var(--bg2)',
+                color: msg.role === 'user' ? 'var(--bg)' : 'var(--fg)',
+                border: `1px solid ${msg.role === 'user' ? 'var(--fg)' : 'var(--border)'}`,
+                borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                padding: '14px 18px',
+              }}>
+                {msg.role === 'assistant' && (
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)', marginBottom: 8, letterSpacing: 1 }}>
+                    {agent.agent_name as string}
                   </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            {activeAuto && (
-              <div>
-                <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, marginBottom: 20 }}>
-                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 20 }}>
-                    <span style={{ fontSize: 32 }}>{activeAuto.icon as string}</span>
-                    <div>
-                      <h2 style={{ fontFamily: 'var(--serif)', fontSize: 24, fontWeight: 400, marginBottom: 4 }}>{activeAuto.title as string}</h2>
-                      <p style={{ fontSize: 13, color: 'var(--muted)' }}>{activeAuto.description as string}</p>
-                    </div>
+                )}
+                <div style={{ fontSize: 14, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{msg.content}</div>
+                {msg.emailSent && (
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: '#4ade80', marginTop: 10, padding: '4px 10px', background: '#0d2e14', borderRadius: 6, display: 'inline-block', border: '1px solid #1a4a24' }}>
+                    ✓ email sent automatically
                   </div>
-
-                  <div className="label" style={{ marginBottom: 8 }}>{activeAuto.inputLabel as string}</div>
-                  <textarea
-                    value={input}
-                    onChange={e => setInput(e.target.value)}
-                    placeholder={activeAuto.inputPlaceholder as string}
-                    rows={5}
-                    className="input"
-                    style={{ marginBottom: 14, fontSize: 14, resize: 'vertical' }}
-                  />
-
-                  <div className="label" style={{ marginBottom: 8 }}>customer email <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(optional — agent will send response automatically)</span></div>
-                  <input
-                    type="email"
-                    value={customerEmail}
-                    onChange={e => setCustomerEmail(e.target.value)}
-                    placeholder="customer@example.com"
-                    className="input"
-                    style={{ marginBottom: 16, fontSize: 14 }}
-                  />
-
-                  <button onClick={runAutomation} disabled={running || !input.trim()}
-                    className="btn btn-accent"
-                    style={{ fontSize: 13, padding: '11px 28px', opacity: (running || !input.trim()) ? 0.5 : 1 }}>
-                    {running ? status || 'Running...' : `Run ${activeAuto.title as string} ✦`}
-                  </button>
-
-                  {status && !running && (
-                    <p style={{ fontFamily: 'var(--mono)', fontSize: 12, color: emailSent ? '#4ade80' : 'var(--muted)', marginTop: 12 }}>
-                      {emailSent ? '✓ ' : ''}{status}
-                    </p>
-                  )}
+                )}
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--muted)', marginTop: 8, opacity: 0.5 }}>
+                  {new Date(msg.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                 </div>
-
-                {output && (
-                  <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, marginBottom: 20 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                      <div className="label">{activeAuto.outputLabel as string}</div>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        {emailSent && (
-                          <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: '#4ade80', padding: '5px 12px', background: '#0d2e14', borderRadius: 6, border: '1px solid #1a4a24' }}>
-                            ✓ emailed
-                          </span>
-                        )}
-                        <button onClick={copyOutput} className="btn btn-outline" style={{ fontSize: 11, padding: '5px 12px' }}>Copy →</button>
-                      </div>
-                    </div>
-                    <div style={{ fontSize: 14, lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{output}</div>
-                  </div>
-                )}
-
-                {history.length > 0 && (
-                  <div>
-                    <div className="label" style={{ marginBottom: 12 }}>recent runs</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {history.slice(0, 5).map((run, i) => (
-                        <div key={i} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 18px', cursor: 'pointer' }}
-                          onClick={() => setOutput(run.output as string)}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                            <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--accent)' }}>{run.automation_type as string}</span>
-                            <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)' }}>
-                              {new Date(run.created_at as string).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          </div>
-                          <p style={{ fontSize: 13, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{run.input as string}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
-            )}
-          </div>
+            </div>
+          ))}
+
+          {running && (
+            <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+              <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '16px 16px 16px 4px', padding: '14px 18px' }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)', marginBottom: 8, letterSpacing: 1 }}>
+                  {agent.agent_name as string}
+                </div>
+                <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                  {[0, 1, 2].map(i => (
+                    <div key={i} style={{
+                      width: 6, height: 6, borderRadius: '50%', background: 'var(--muted)',
+                      animation: `pulse 1.4s ease-in-out ${i * 0.2}s infinite`,
+                    }} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          <div ref={bottomRef} />
         </div>
+
+        {/* Input */}
+        <div style={{
+          display: 'flex', gap: 10, alignItems: 'flex-end', flexShrink: 0,
+          background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: '12px 16px',
+        }}>
+          <textarea
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={`Tell ${agent.agent_name as string} what to do... (e.g. "Send a follow-up email to john@gmail.com about his order")`}
+            rows={2}
+            style={{
+              flex: 1, background: 'transparent', border: 'none', outline: 'none',
+              fontFamily: 'var(--sans)', fontSize: 14, color: 'var(--fg)', resize: 'none', lineHeight: 1.6,
+            }}
+          />
+          <button
+            onClick={sendMessage}
+            disabled={running || !input.trim()}
+            className="btn btn-accent"
+            style={{ fontSize: 12, padding: '8px 18px', flexShrink: 0, opacity: (running || !input.trim()) ? 0.5 : 1 }}
+          >
+            Send →
+          </button>
+        </div>
+        <p style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', textAlign: 'center', marginTop: 8 }}>
+          Press Enter to send · Shift+Enter for new line
+        </p>
       </div>
+
+      <style>{`
+        @keyframes pulse {
+          0%, 60%, 100% { opacity: 0.3; transform: scale(1); }
+          30% { opacity: 1; transform: scale(1.2); }
+        }
+      `}</style>
     </>
   )
 }
