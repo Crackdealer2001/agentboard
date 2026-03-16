@@ -154,32 +154,48 @@ When user mentions a meeting, appointment, deadline or scheduled activity:
 
 ━━━ INVOICE RULES ━━━
 
-When creating an invoice you MUST follow these rules exactly:
+CRITICAL: Every single service, phase, or scope item mentioned by the user MUST appear as its own separate line item on the invoice. Never combine multiple items into one line.
 
-1. EVERY service, phase, or item mentioned = its own separate line
-2. Support ANY number of line items — 1 item, 5 items, 20 items — whatever is needed
-3. If a total is given without per-item prices, divide evenly across all items
-4. Never combine multiple services into one line item
-5. Always generate invoice number as INV-[YEAR]-[3 digit number] e.g. INV-2026-001
+PRICING RULES:
+- If user gives individual prices per item → use those exact prices per line
+- If user gives one total price for multiple items → show each item as its own line with "Included" in rate column and $0.00 in amount EXCEPT the last item which gets the full total
+- If user says "lump sum" or "one total" → still list every item separately, put full amount on first line, rest show "— Included" with $0.00
+- If user says "split evenly" → divide total by number of items
 
-INVOICE TEXT FORMAT (show this to user):
-INVOICE #[NUMBER]
+INVOICE TEXT FORMAT (show this in your response):
+INVOICE #INV-[YEAR]-[NUMBER]
 Bill To: [client name]
 
-[Phase/Item 1 description] | 1 | $[amount] | $[amount]
-[Phase/Item 2 description] | 1 | $[amount] | $[amount]
-[Phase/Item 3 description] | 1 | $[amount] | $[amount]
-... continue for ALL items no matter how many ...
+[Item 1] | 1 | $[rate or "Included"] | $[amount or 0.00]
+[Item 2] | 1 | Included | $0.00
+[Item 3] | 1 | Included | $0.00
+... one line per item, NO EXCEPTIONS ...
 
-Subtotal: $[amount]
-Tax (10%): $[amount]
-Total Due: $[amount]
+Subtotal: $[total before tax]
+Tax (10%): $[tax]
+Total Due: $[grand total]
 
-INVOICE MARKER (add at end, items separated by &&):
-[SEND_INVOICE:email:invoiceNumber:clientName:subtotal:tax:total:Item1 desc|1|$rate|$amount&&Item2 desc|1|$rate|$amount&&Item3 desc|1|$rate|$amount&&...continue for all items...]
+INVOICE MARKER FORMAT — items separated by &&:
+[SEND_INVOICE:email:INV-[YEAR]-[NUM]:clientName:subtotal:tax:total:Item1|1|$rate|$amount&&Item2|1|Included|$0.00&&Item3|1|Included|$0.00&&...]
 
-EXAMPLE — user says "invoice Cara for $3800 for: workshop, brand strategy, two concept proposal, final concept, logo suite, brand guide, collaterals":
-[SEND_INVOICE::INV-2026-001:Cara:3800:380:4180:Phase 1 - Workshop|1|$542.86|$542.86&&Phase 2 - Brand Strategy|1|$542.86|$542.86&&Phase 3 - Two Concept Proposal|1|$542.86|$542.86&&Phase 4 - Final Refined Concept|1|$542.86|$542.86&&Phase 5 - Logo and Graphic Suite|1|$542.86|$542.86&&Phase 6 - Brand Guide|1|$542.86|$542.86&&Phase 7 - Brand Collaterals (up to 5)|1|$542.86|$542.86]
+EXAMPLE — "Invoice Cara $3800 for: Workshop, Brand Strategy, Two Concept Proposal, Final Concept, Logo Suite, Brand Guide, Collaterals. One lump sum.":
+
+INVOICE #INV-2026-001
+Bill To: Cara
+
+Phase 1 - Workshop | 1 | $3,800.00 | $3,800.00
+Phase 2 - Brand Strategy | 1 | Included | $0.00
+Phase 3 - Two Concept Proposal | 1 | Included | $0.00
+Phase 4 - Final Refined Concept | 1 | Included | $0.00
+Phase 5 - Logo and Graphic Suite | 1 | Included | $0.00
+Phase 6 - Brand Guide | 1 | Included | $0.00
+Phase 7 - Brand Collaterals (up to 5) | 1 | Included | $0.00
+
+Subtotal: $3800
+Tax (10%): $380
+Total Due: $4180
+
+[SEND_INVOICE::INV-2026-001:Cara:3800:380:4180:Phase 1 - Workshop|1|$3,800.00|$3,800.00&&Phase 2 - Brand Strategy|1|Included|$0.00&&Phase 3 - Two Concept Proposal|1|Included|$0.00&&Phase 4 - Final Refined Concept|1|Included|$0.00&&Phase 5 - Logo and Graphic Suite|1|Included|$0.00&&Phase 6 - Brand Guide|1|Included|$0.00&&Phase 7 - Brand Collaterals (up to 5)|1|Included|$0.00]
 
 CONTRACT FORMAT:
 # Parties
@@ -317,17 +333,18 @@ GENERAL RULES:
 
       // Parse unlimited line items separated by &&
       const itemsRaw = (parts[6] || '').split('&&')
-      const lineItemsHTML = itemsRaw.map(item => {
+      const lineItemsHTML = itemsRaw.map((item, index) => {
         const p = item.split('|')
         const desc = p[0]?.trim() || 'Service'
         const qty = p[1]?.trim() || '1'
         const rate = p[2]?.trim() || ''
         const amount = p[3]?.trim() || ''
+        const isIncluded = rate === 'Included' || amount === '$0.00' || amount === '0.00'
         return `<tr>
           <td style="padding:14px 16px;font-size:14px;color:#374151;border-bottom:1px solid #f3f4f6;">${desc}</td>
           <td align="center" style="padding:14px 16px;font-size:14px;color:#6b7280;border-bottom:1px solid #f3f4f6;">${qty}</td>
           <td align="right" style="padding:14px 16px;font-size:14px;color:#6b7280;border-bottom:1px solid #f3f4f6;">${rate}</td>
-          <td align="right" style="padding:14px 16px;font-size:14px;font-weight:700;color:#0a0a0a;border-bottom:1px solid #f3f4f6;">${amount}</td>
+          <td align="right" style="padding:14px 16px;font-size:14px;font-weight:${isIncluded ? '400' : '700'};color:${isIncluded ? '#9ca3af' : '#0a0a0a'};border-bottom:1px solid #f3f4f6;">${isIncluded ? '—' : amount}</td>
         </tr>`
       }).join('')
 
