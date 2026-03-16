@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 export default function Navbar({ active }: { active?: string }) {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => setUser(user))
@@ -27,10 +28,15 @@ export default function Navbar({ active }: { active?: string }) {
         <span className="nav-logo-dot" />
         AgentBoard
       </Link>
+
       <div className="nav-links">
-        <Link href="/agents" className={`nav-link ${active === 'agents' ? 'active' : ''}`}>agents</Link>
-        <Link href="/tasks" className={`nav-link ${active === 'tasks' ? 'active' : ''}`}>tasks</Link>
-        <Link href="/builder" className={`nav-link ${active === 'builder' ? 'active' : ''}`}>builder</Link>
+        <Link href="/#how-it-works" className={`nav-link ${active === 'how' ? 'active' : ''}`}>
+          how it works
+        </Link>
+        <Link href="/builder" className={`nav-link ${active === 'builder' ? 'active' : ''}`}>
+          builder
+        </Link>
+
         {user ? (
           <>
             <Link href="/dashboard" className={`nav-link ${active === 'dashboard' ? 'active' : ''}`}>
@@ -41,7 +47,14 @@ export default function Navbar({ active }: { active?: string }) {
             </button>
           </>
         ) : (
-          <Link href="/auth" className="btn btn-dark">sign in</Link>
+          <>
+            <Link href="/auth" className="btn btn-outline" style={{ fontSize: 12 }}>
+              sign in
+            </Link>
+            <Link href="/builder" className="btn btn-accent" style={{ fontSize: 12 }}>
+              get started →
+            </Link>
+          </>
         )}
       </div>
     </nav>

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import Navbar from '@/components/Navbar'
+import Navbar from '../components/Navbar'
 
 export default function Home() {
   return (
@@ -29,7 +29,7 @@ export default function Home() {
 
       {/* HOW IT WORKS */}
       <div style={{ maxWidth: 1000, margin: '0 auto', padding: '0 40px 80px' }}>
-        <hr style={{ border: 'none', borderTop: '1px solid var(--border)', marginBottom: 60 }} />
+        <hr id="how-it-works" style={{ border: 'none', borderTop: '1px solid var(--border)', marginBottom: 60 }} />
         <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 40 }}>
           How it works
         </div>
@@ -62,7 +62,7 @@ export default function Home() {
             { icon: '😤', label: 'Complaints', desc: 'Handled with care' },
             { icon: '🎯', label: 'Marketing', desc: 'Campaigns written instantly' },
           ].map(f => (
-            <div key={f.label} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 20px', transition: 'border-color 0.15s' }}>
+            <div key={f.label} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 20px' }}>
               <div style={{ fontSize: 24, marginBottom: 8 }}>{f.icon}</div>
               <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 4 }}>{f.label}</div>
               <div style={{ fontSize: 12, color: 'var(--muted)' }}>{f.desc}</div>
