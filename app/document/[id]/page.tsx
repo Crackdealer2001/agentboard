@@ -10,16 +10,16 @@ export default async function DocumentPage({
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  const { data: doc } = await supabase
+  const { data: document } = await supabase
     .from('documents')
-    .select('*, business_agents(*)')
+    .select('*')
     .eq('id', id)
     .single()
 
-  if (!doc) return <div style={{ padding: 40 }}>Document not found</div>
+  if (!document) return <div style={{ padding: 40, color: '#fff' }}>Document not found</div>
 
-  return <PrintDocument doc={doc} />
+  return <PrintDocument document={document} />
 }
