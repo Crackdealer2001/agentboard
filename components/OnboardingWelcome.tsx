@@ -63,12 +63,36 @@ export default function OnboardingWelcome({ userId, onDismiss }: Props) {
           gap: 14,
         }}>
           {[
-            { icon: '⚡', label: 'Build an AI agent', desc: 'Trained on your business in minutes' },
-            { icon: '🧠', label: 'Add a knowledge base', desc: 'FAQs, pricing, services, policies' },
-            { icon: '🌐', label: 'Launch a customer portal', desc: 'A branded chat page for your customers' },
+            {
+              icon: (
+                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                  <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>
+                </svg>
+              ),
+              label: 'Build an AI agent',
+              desc: 'Trained on your business in minutes',
+            },
+            {
+              icon: (
+                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                  <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v4c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 9v4c0 1.66 4.03 3 9 3s9-1.34 9-3V9"/><path d="M3 13v4c0 1.66 4.03 3 9 3s9-1.34 9-3v-4"/>
+                </svg>
+              ),
+              label: 'Add a knowledge base',
+              desc: 'FAQs, pricing, services, policies',
+            },
+            {
+              icon: (
+                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                </svg>
+              ),
+              label: 'Launch a customer portal',
+              desc: 'A branded chat page for your customers',
+            },
           ].map(item => (
             <div key={item.label} style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-              <div style={{ fontSize: 18, lineHeight: 1, marginTop: 1 }}>{item.icon}</div>
+              <div style={{ color: 'var(--accent)', marginTop: 1, flexShrink: 0 }}>{item.icon}</div>
               <div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', marginBottom: 2 }}>{item.label}</div>
                 <div style={{ fontSize: 13, color: 'var(--fg3)' }}>{item.desc}</div>
