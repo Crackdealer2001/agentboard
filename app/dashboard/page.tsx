@@ -1,7 +1,9 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import Sidebar from '@/components/Sidebar'
+import OnboardingWelcome from '@/components/OnboardingWelcome'
+import OnboardingChecklist from '@/components/OnboardingChecklist'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
@@ -14,20 +16,75 @@ export default function DashboardPage() {
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [user, setUser] = useState<any>(null)
 
+  // Onboarding state
+  const [profile, setProfile] = useState<{ onboarding_step: number; onboarding_completed: boolean } | null>(null)
+  const [showWelcome, setShowWelcome] = useState(false)
+  const [showChecklist, setShowChecklist] = useState(false)
+  const [hasKnowledge, setHasKnowledge] = useState(false)
+
   useEffect(() => {
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/auth'); return }
       setUser(user)
+
       const { data: ba } = await supabase
         .from('business_agents')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
-      setBusinessAgents(ba || [])
+      const agents = ba || []
+      setBusinessAgents(agents)
+
+      // Check knowledge base
+      const agentIds = agents.map((a: any) => a.id)
+      if (agentIds.length > 0) {
+        const { data: kb } = await supabase
+          .from('knowledge_base')
+          .select('id')
+          .in('business_agent_id', agentIds)
+          .limit(1)
+        setHasKnowledge((kb || []).length > 0)
+      }
+
+      // Load or create profile
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('onboarding_step, onboarding_completed')
+        .eq('id', user.id)
+        .single()
+
+      if (!prof) {
+        await supabase.from('profiles').insert({
+          id: user.id,
+          onboarding_step: 0,
+          onboarding_completed: false,
+        })
+        setProfile({ onboarding_step: 0, onboarding_completed: false })
+        setShowWelcome(true)
+      } else {
+        setProfile(prof)
+        if (prof.onboarding_step === 0) {
+          setShowWelcome(true)
+        } else if (!prof.onboarding_completed) {
+          setShowChecklist(true)
+        }
+      }
+
       setLoading(false)
     }
     load()
+  }, [])
+
+  const handleWelcomeDismiss = () => {
+    setShowWelcome(false)
+    setShowChecklist(true)
+    setProfile(prev => prev ? { ...prev, onboarding_step: 1 } : null)
+  }
+
+  const handleChecklistComplete = useCallback(() => {
+    setShowChecklist(false)
+    setProfile(prev => prev ? { ...prev, onboarding_completed: true } : null)
   }, [])
 
   const confirmDelete = async () => {
@@ -39,6 +96,46 @@ export default function DashboardPage() {
     setDeleteConfirmText('')
     setDeleteLoading(false)
   }
+
+  // Build checklist steps from live data
+  const firstAgent = businessAgents[0]
+  const hasAgent = businessAgents.length > 0
+  const hasPortalCustomized = businessAgents.some(a =>
+    (a.portal_tagline && a.portal_tagline.trim()) ||
+    (a.portal_color && a.portal_color !== '#c8f135')
+  )
+  const hasPortalEnabled = businessAgents.some(a => a.portal_enabled)
+
+  const checklistSteps = [
+    {
+      label: 'Create your account',
+      done: true,
+    },
+    {
+      label: 'Build your first AI agent',
+      done: hasAgent,
+      href: '/builder',
+      linkLabel: 'Build agent →',
+    },
+    {
+      label: 'Add knowledge base entries',
+      done: hasKnowledge,
+      href: firstAgent ? `/agent/${firstAgent.id}/manage` : '/builder',
+      linkLabel: 'Add knowledge →',
+    },
+    {
+      label: 'Customize your portal',
+      done: hasPortalCustomized,
+      href: firstAgent ? `/agent/${firstAgent.id}/manage` : '/builder',
+      linkLabel: 'Customize →',
+    },
+    {
+      label: 'Share your portal link',
+      done: hasPortalEnabled,
+      href: firstAgent ? `/agent/${firstAgent.id}/manage` : '/builder',
+      linkLabel: 'Enable portal →',
+    },
+  ]
 
   if (loading) return (
     <div className="app-layout">
@@ -54,6 +151,11 @@ export default function DashboardPage() {
   return (
     <div className="app-layout">
       <Sidebar />
+
+      {/* Welcome screen overlay */}
+      {showWelcome && user && (
+        <OnboardingWelcome userId={user.id} onDismiss={handleWelcomeDismiss} />
+      )}
 
       {deleteModal && (
         <div className="modal-overlay">
@@ -133,6 +235,15 @@ export default function DashboardPage() {
               + Build new agent
             </Link>
           </div>
+
+          {/* Onboarding checklist */}
+          {showChecklist && user && (
+            <OnboardingChecklist
+              userId={user.id}
+              steps={checklistSteps}
+              onComplete={handleChecklistComplete}
+            />
+          )}
 
           {/* Stats */}
           <div style={{
