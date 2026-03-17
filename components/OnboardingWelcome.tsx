@@ -8,11 +8,10 @@ interface Props {
 
 export default function OnboardingWelcome({ userId, onDismiss }: Props) {
   const handleDismiss = async () => {
-    await supabase.from('profiles').upsert({
-      id: userId,
-      onboarding_step: 1,
-      onboarding_completed: false,
-    })
+    await supabase
+      .from('profiles')
+      .update({ onboarding_step: 1 })
+      .eq('id', userId)
     onDismiss()
   }
 
