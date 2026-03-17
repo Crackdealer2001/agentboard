@@ -15,17 +15,27 @@ export default function ManageClient({
   team: Record<string, unknown>[]
 }) {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<'knowledge' | 'contacts' | 'memory' | 'team'>('knowledge')
+  const [activeTab, setActiveTab] = useState<'knowledge' | 'contacts' | 'memory' | 'team' | 'portal'>('knowledge')
   const [kb, setKb] = useState(knowledge)
   const [cts, setCts] = useState(contacts)
   const [mem, setMem] = useState(memories)
   const [tm, setTm] = useState(team)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const kbFileRef = useRef<HTMLInputElement>(null)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
   const [newKb, setNewKb] = useState({ title: '', content: '', type: 'general' })
   const [newContact, setNewContact] = useState({ name: '', email: '', phone: '', company: '', notes: '' })
   const [newTeam, setNewTeam] = useState({ email: '', role: 'member' })
+  const [portalSettings, setPortalSettings] = useState({
+    portal_enabled: agent.portal_enabled !== false,
+    portal_color: (agent.portal_color as string) || '#c8f135',
+    portal_tagline: (agent.portal_tagline as string) || '',
+    portal_greeting: (agent.portal_greeting as string) || '',
+    portal_avatar_url: (agent.portal_avatar_url as string) || '',
+  })
   const [saving, setSaving] = useState(false)
+  const [savingPortal, setSavingPortal] = useState(false)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [importing, setImporting] = useState(false)
   const [msg, setMsg] = useState('')
   const [msgType, setMsgType] = useState<'success' | 'error'>('success')
@@ -103,30 +113,16 @@ export default function ManageClient({
     const res = await fetch('/api/knowledge', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        business_agent_id: agent.id,
-        title: newKb.title.trim(),
-        content: newKb.content.trim(),
-        type: newKb.type,
-      }),
+      body: JSON.stringify({ business_agent_id: agent.id, title: newKb.title.trim(), content: newKb.content.trim(), type: newKb.type }),
     })
     const json = await res.json()
-    if (json.error) {
-      showMsg(`Failed to save: ${json.error}`, 'error')
-    } else if (json.data) {
-      setKb(prev => [json.data, ...prev])
-      setNewKb({ title: '', content: '', type: 'general' })
-      showMsg('Knowledge saved!')
-    }
+    if (json.error) showMsg(`Failed to save: ${json.error}`, 'error')
+    else if (json.data) { setKb(prev => [json.data, ...prev]); setNewKb({ title: '', content: '', type: 'general' }); showMsg('Knowledge saved!') }
     setSaving(false)
   }
 
   const deleteKb = async (id: string) => {
-    const res = await fetch('/api/knowledge', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id }),
-    })
+    const res = await fetch('/api/knowledge', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
     const json = await res.json()
     if (json.error) showMsg(`Failed to delete: ${json.error}`, 'error')
     else setKb(prev => prev.filter(k => k.id !== id))
@@ -165,7 +161,41 @@ export default function ManageClient({
     setTm(prev => prev.filter(t => t.id !== id))
   }
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingAvatar(true)
+    const ext = file.name.split('.').pop()
+    const fileName = `${agent.id}-${Date.now()}.${ext}`
+    const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, file, { upsert: true })
+    if (uploadError) { showMsg(`Upload failed: ${uploadError.message}`, 'error'); setUploadingAvatar(false); return }
+    const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(fileName)
+    setPortalSettings(prev => ({ ...prev, portal_avatar_url: urlData.publicUrl }))
+    showMsg('Avatar uploaded! Save settings to apply.')
+    setUploadingAvatar(false)
+    e.target.value = ''
+  }
+
+  const savePortalSettings = async () => {
+    setSavingPortal(true)
+    const res = await fetch('/api/portal-settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agent_id: agent.id, ...portalSettings }),
+    })
+    const json = await res.json()
+    if (json.error) showMsg(`Failed: ${json.error}`, 'error')
+    else showMsg('Portal settings saved!')
+    setSavingPortal(false)
+  }
+
   const contactFields = ['name', 'email', 'phone', 'company', 'notes', 'skip']
+
+  const PRESET_COLORS = [
+    '#c8f135', '#3b82f6', '#8b5cf6', '#ef4444',
+    '#f59e0b', '#10b981', '#ec4899', '#0a0a0a',
+    '#1e3a5f', '#7c3aed', '#dc2626', '#059669',
+  ]
 
   return (
     <div className="app-layout">
@@ -195,6 +225,7 @@ export default function ManageClient({
               { key: 'contacts', label: `Contacts (${cts.length})` },
               { key: 'memory', label: `Memory (${mem.length})` },
               { key: 'team', label: `Team (${tm.length})` },
+              { key: 'portal', label: 'Portal Settings' },
             ].map(tab => (
               <button key={tab.key} onClick={() => setActiveTab(tab.key as typeof activeTab)}
                 style={{ fontFamily: 'var(--sidebar-font)', fontSize: 12, padding: '8px 18px', borderRadius: 8, cursor: 'pointer', border: 'none', background: activeTab === tab.key ? 'var(--fg)' : 'transparent', color: activeTab === tab.key ? 'var(--bg)' : 'var(--fg3)', transition: 'all 0.15s', fontWeight: activeTab === tab.key ? 600 : 400 }}>
@@ -236,7 +267,7 @@ export default function ManageClient({
                 <div style={{ marginBottom: 16 }}>
                   <label className="label">Content *</label>
                   <textarea style={{ ...inputStyle, resize: 'vertical' }} rows={4}
-                    placeholder="e.g. Initial consultation is $250 for 30 minutes. First-time clients receive a free 15-minute phone consultation."
+                    placeholder="e.g. Initial consultation is $250 for 30 minutes..."
                     value={newKb.content} onChange={e => setNewKb({ ...newKb, content: e.target.value })} />
                 </div>
                 <button onClick={saveKb} disabled={saving || !newKb.title || !newKb.content} className="btn btn-accent"
@@ -411,6 +442,115 @@ export default function ManageClient({
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {activeTab === 'portal' && (
+            <div>
+              {/* Live preview */}
+              <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: 24, marginBottom: 24 }}>
+                <div style={{ fontFamily: 'var(--sidebar-font)', fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Live preview</div>
+                <div style={{ background: '#f9fafb', borderRadius: 12, padding: '32px 24px', textAlign: 'center', border: '1px solid #e5e7eb' }}>
+                  <div style={{ width: 72, height: 72, borderRadius: 18, background: portalSettings.portal_color, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', overflow: 'hidden', boxShadow: `0 8px 24px ${portalSettings.portal_color}44` }}>
+                    {portalSettings.portal_avatar_url ? (
+                      <img src={portalSettings.portal_avatar_url} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <span style={{ fontWeight: 800, fontSize: 32, color: '#0a0a0a' }}>{(agent.agent_name as string)?.[0]}</span>
+                    )}
+                  </div>
+                  <div style={{ fontFamily: '"Instrument Serif", Georgia, serif', fontSize: 22, color: '#111', marginBottom: 8 }}>
+                    {portalSettings.portal_tagline || `Welcome to ${agent.business_name as string}`}
+                  </div>
+                  <div style={{ fontSize: 14, color: '#6b7280', maxWidth: 360, margin: '0 auto 20px', lineHeight: 1.6 }}>
+                    {portalSettings.portal_greeting || `Hi! I'm ${agent.agent_name as string}, the AI assistant for ${agent.business_name as string}.`}
+                  </div>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 24px', background: portalSettings.portal_color, borderRadius: 8, fontSize: 14, fontWeight: 700, color: '#0a0a0a' }}>
+                    Start chatting →
+                  </div>
+                </div>
+              </div>
+
+              {/* Avatar upload */}
+              <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: 24, marginBottom: 20 }}>
+                <div style={{ fontFamily: 'var(--sidebar-font)', fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Agent avatar</div>
+                <p style={{ fontSize: 13, color: 'var(--fg3)', marginBottom: 16, fontFamily: 'var(--sidebar-font)' }}>Upload a logo or photo to show on your customer portal instead of the letter icon.</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                  <div style={{ width: 64, height: 64, borderRadius: 14, background: portalSettings.portal_color, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, boxShadow: `0 4px 12px ${portalSettings.portal_color}44` }}>
+                    {portalSettings.portal_avatar_url ? (
+                      <img src={portalSettings.portal_avatar_url} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <span style={{ fontWeight: 800, fontSize: 28, color: '#0a0a0a' }}>{(agent.agent_name as string)?.[0]}</span>
+                    )}
+                  </div>
+                  <div>
+                    <button onClick={() => avatarInputRef.current?.click()} disabled={uploadingAvatar} className="btn btn-outline" style={{ fontSize: 13, fontFamily: 'var(--sidebar-font)', marginBottom: 6 }}>
+                      {uploadingAvatar ? 'Uploading...' : 'Upload image'}
+                    </button>
+                    <div style={{ fontSize: 12, color: 'var(--fg3)', fontFamily: 'var(--sidebar-font)' }}>PNG, JPG or GIF. Square images work best.</div>
+                    {portalSettings.portal_avatar_url && (
+                      <button onClick={() => setPortalSettings(prev => ({ ...prev, portal_avatar_url: '' }))} style={{ background: 'none', border: 'none', color: 'var(--red)', fontSize: 12, cursor: 'pointer', fontFamily: 'var(--sidebar-font)', padding: 0, marginTop: 4 }}>
+                        Remove avatar
+                      </button>
+                    )}
+                  </div>
+                  <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleAvatarUpload} style={{ display: 'none' }} />
+                </div>
+              </div>
+
+              {/* Brand color */}
+              <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: 24, marginBottom: 20 }}>
+                <div style={{ fontFamily: 'var(--sidebar-font)', fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Brand color</div>
+                <p style={{ fontSize: 13, color: 'var(--fg3)', marginBottom: 16, fontFamily: 'var(--sidebar-font)' }}>This color is used for buttons, accents, and the avatar background on your portal.</p>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                  {PRESET_COLORS.map(color => (
+                    <button key={color} onClick={() => setPortalSettings(prev => ({ ...prev, portal_color: color }))}
+                      style={{ width: 32, height: 32, borderRadius: 8, background: color, border: portalSettings.portal_color === color ? '3px solid var(--fg)' : '2px solid transparent', cursor: 'pointer', transition: 'all 0.1s' }} />
+                  ))}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <input type="color" value={portalSettings.portal_color} onChange={e => setPortalSettings(prev => ({ ...prev, portal_color: e.target.value }))}
+                    style={{ width: 40, height: 40, borderRadius: 8, border: '1px solid var(--border2)', cursor: 'pointer', padding: 2, background: 'var(--bg3)' }} />
+                  <input style={{ ...inputStyle, width: 140, fontFamily: 'var(--mono)' }} value={portalSettings.portal_color} onChange={e => setPortalSettings(prev => ({ ...prev, portal_color: e.target.value }))} placeholder="#c8f135" />
+                </div>
+              </div>
+
+              {/* Tagline and greeting */}
+              <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: 24, marginBottom: 20 }}>
+                <div style={{ fontFamily: 'var(--sidebar-font)', fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Portal text</div>
+                <div style={{ marginBottom: 16 }}>
+                  <label className="label">Tagline</label>
+                  <input style={inputStyle} placeholder={`Welcome to ${agent.business_name as string}`} value={portalSettings.portal_tagline} onChange={e => setPortalSettings(prev => ({ ...prev, portal_tagline: e.target.value }))} />
+                  <div style={{ fontSize: 11, color: 'var(--fg3)', fontFamily: 'var(--sidebar-font)', marginTop: 4 }}>The headline customers see on your portal homepage.</div>
+                </div>
+                <div>
+                  <label className="label">Greeting message</label>
+                  <textarea style={{ ...inputStyle, resize: 'vertical' }} rows={3}
+                    placeholder={`Hi! I'm ${agent.agent_name as string}, the AI assistant for ${agent.business_name as string}. How can I help you today?`}
+                    value={portalSettings.portal_greeting} onChange={e => setPortalSettings(prev => ({ ...prev, portal_greeting: e.target.value }))} />
+                  <div style={{ fontSize: 11, color: 'var(--fg3)', fontFamily: 'var(--sidebar-font)', marginTop: 4 }}>The first message customers see when they open the chat.</div>
+                </div>
+              </div>
+
+              {/* Enable/disable */}
+              <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: 24, marginBottom: 24 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontFamily: 'var(--sidebar-font)', fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Portal status</div>
+                    <div style={{ fontSize: 13, color: 'var(--fg3)', fontFamily: 'var(--sidebar-font)' }}>
+                      {portalSettings.portal_enabled ? 'Your portal is live and accessible to customers.' : 'Your portal is disabled. Customers cannot access it.'}
+                    </div>
+                  </div>
+                  <button onClick={() => setPortalSettings(prev => ({ ...prev, portal_enabled: !prev.portal_enabled }))}
+                    style={{ width: 48, height: 26, borderRadius: 13, background: portalSettings.portal_enabled ? portalSettings.portal_color : 'var(--bg4)', border: '1px solid var(--border2)', cursor: 'pointer', position: 'relative', transition: 'all 0.2s', flexShrink: 0 }}>
+                    <div style={{ width: 18, height: 18, borderRadius: '50%', background: '#fff', position: 'absolute', top: 3, left: portalSettings.portal_enabled ? 26 : 4, transition: 'all 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
+                  </button>
+                </div>
+              </div>
+
+              <button onClick={savePortalSettings} disabled={savingPortal} className="btn btn-accent"
+                style={{ fontSize: 14, height: 44, padding: '0 32px', fontFamily: 'var(--sidebar-font)', fontWeight: 600 }}>
+                {savingPortal ? 'Saving...' : 'Save portal settings →'}
+              </button>
             </div>
           )}
         </div>
