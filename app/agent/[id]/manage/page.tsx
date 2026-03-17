@@ -10,7 +10,7 @@ export default async function ManagePage({
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
   const [{ data: agent }, { data: knowledge }, { data: contacts }, { data: memories }, { data: team }] = await Promise.all([
@@ -18,7 +18,7 @@ export default async function ManagePage({
     supabase.from('knowledge_base').select('*').eq('business_agent_id', id).order('created_at', { ascending: false }),
     supabase.from('contacts').select('*').eq('business_agent_id', id).order('created_at', { ascending: false }),
     supabase.from('agent_memory').select('*').eq('business_agent_id', id).order('updated_at', { ascending: false }),
-    supabase.from('team_members').select('*').eq('business_agent_id', id).order('invited_at', { ascending: false }),
+    supabase.from('team_members').select('*').eq('business_agent_id', id).order('created_at', { ascending: false }),
   ])
 
   if (!agent) return (
