@@ -28,19 +28,19 @@ interface CalendarEvent {
 }
 
 const QUICK_ACTIONS = [
-  { label: 'Reply to customer', prompt: 'Help me reply to this customer message: ', icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/></svg> },
-  { label: 'Create invoice', prompt: 'Create and send an invoice to ', icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg> },
-  { label: 'Write contract', prompt: 'Draft a service contract for ', icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M9 12h6M9 16h6M9 8h6M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg> },
-  { label: 'Social media post', prompt: 'Write a social media post about ', icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.59 13.51 6.83 3.98M15.41 6.51l-6.82 3.98"/></svg> },
-  { label: 'Weekly report', prompt: 'Generate a weekly business report covering ', icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg> },
-  { label: 'Follow-up email', prompt: 'Write a follow-up email to ', icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M22 2 11 13M22 2 15 22l-4-9-9-4 20-7z"/></svg> },
-  { label: 'Marketing email', prompt: 'Write a marketing email campaign about ', icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> },
-  { label: 'Handle complaint', prompt: 'Help me respond to this customer complaint: ', icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg> },
-  { label: 'Business proposal', prompt: 'Write a business proposal for ', icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
-  { label: 'Meeting agenda', prompt: 'Create a meeting agenda for ', icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> },
-  { label: 'Welcome message', prompt: 'Write a welcome message for new customers: ', icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> },
-  { label: 'Create order', prompt: 'Create an order record for ', icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0"/></svg> },
-  { label: 'Create quote', prompt: 'Create a quote for ', icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/></svg> },
+  { label: 'Reply to customer', prompt: 'Help me reply to this customer message: ', icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m2 7 10 7 10-7" /></svg> },
+  { label: 'Create invoice', prompt: 'Create and send an invoice to ', icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" /></svg> },
+  { label: 'Write contract', prompt: 'Draft a service contract for ', icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M9 12h6M9 16h6M9 8h6M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" /></svg> },
+  { label: 'Social media post', prompt: 'Write a social media post about ', icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="m8.59 13.51 6.83 3.98M15.41 6.51l-6.82 3.98" /></svg> },
+  { label: 'Weekly report', prompt: 'Generate a weekly business report covering ', icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M3 3v18h18" /><path d="m19 9-5 5-4-4-3 3" /></svg> },
+  { label: 'Follow-up email', prompt: 'Write a follow-up email to ', icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M22 2 11 13M22 2 15 22l-4-9-9-4 20-7z" /></svg> },
+  { label: 'Marketing email', prompt: 'Write a marketing email campaign about ', icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></svg> },
+  { label: 'Handle complaint', prompt: 'Help me respond to this customer complaint: ', icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" /></svg> },
+  { label: 'Business proposal', prompt: 'Write a business proposal for ', icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg> },
+  { label: 'Meeting agenda', prompt: 'Create a meeting agenda for ', icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg> },
+  { label: 'Welcome message', prompt: 'Write a welcome message for new customers: ', icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg> },
+  { label: 'Create order', prompt: 'Create an order record for ', icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0" /></svg> },
+  { label: 'Create quote', prompt: 'Create a quote for ', icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6M16 13H8M16 17H8" /></svg> },
 ]
 
 const EVENT_COLORS: Record<string, string> = {
@@ -210,7 +210,6 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
     <div className="app-layout">
       <Sidebar />
 
-      {/* Document preview modal */}
       {previewDoc && (
         <div className="modal-overlay">
           <div style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 12, width: '100%', maxWidth: 740, maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
@@ -229,10 +228,9 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
       )}
 
       <main className="app-main">
-        {/* Header */}
         <div className="app-header">
           <button onClick={() => router.push('/dashboard')} className="btn btn-ghost btn-sm" style={{ gap: 6 }}>
-            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7" /></svg>
             Back
           </button>
           <div style={{ width: 1, height: 16, background: 'var(--border2)' }} />
@@ -318,7 +316,6 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
                   </div>
                 </div>
 
-                {/* Action buttons */}
                 <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                   <button
                     onClick={() => {
@@ -340,9 +337,9 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
                     className="btn btn-outline"
                     style={{ height: 44, padding: '0 20px', fontSize: 14, fontFamily: 'var(--sidebar-font)', display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
                     <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                      <polyline points="15 3 21 3 21 9"/>
-                      <line x1="10" y1="14" x2="21" y2="3"/>
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                      <polyline points="15 3 21 3 21 9" />
+                      <line x1="10" y1="14" x2="21" y2="3" />
                     </svg>
                     Customer portal
                   </a>
@@ -352,14 +349,14 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
                     style={{ height: 44, padding: '0 20px', fontSize: 14, fontFamily: 'var(--sidebar-font)', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                     {portalCopied ? (
                       <>
-                        <svg width="14" height="14" fill="none" stroke="var(--accent)" strokeWidth="2" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+                        <svg width="14" height="14" fill="none" stroke="var(--accent)" strokeWidth="2" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></svg>
                         <span style={{ color: 'var(--accent)' }}>Copied!</span>
                       </>
                     ) : (
                       <>
                         <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-                          <rect x="9" y="9" width="13" height="13" rx="2"/>
-                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                          <rect x="9" y="9" width="13" height="13" rx="2" />
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                         </svg>
                         Copy portal link
                       </>
@@ -371,10 +368,10 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
               {/* Stats */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 40 }}>
                 {[
-                  { label: 'Tasks run', value: recentRuns.length, color: 'var(--accent)', icon: <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> },
-                  { label: 'Upcoming events', value: upcomingEvents.length, color: 'var(--blue)', icon: <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> },
-                  { label: 'Industry', value: agent.industry as string || '—', color: 'var(--purple)', icon: <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg> },
-                  { label: 'Tone', value: agent.tone as string || '—', color: 'var(--green)', icon: <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
+                  { label: 'Tasks run', value: recentRuns.length, color: 'var(--accent)', icon: <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></svg> },
+                  { label: 'Upcoming events', value: upcomingEvents.length, color: 'var(--blue)', icon: <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg> },
+                  { label: 'Industry', value: agent.industry as string || '—', color: 'var(--purple)', icon: <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg> },
+                  { label: 'Tone', value: agent.tone as string || '—', color: 'var(--green)', icon: <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg> },
                 ].map(stat => (
                   <div key={stat.label} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10, padding: '24px 28px', display: 'flex', alignItems: 'center', gap: 18 }}>
                     <div style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--bg3)', border: '1px solid var(--border2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: stat.color, flexShrink: 0 }}>
@@ -420,9 +417,9 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
                     className="btn btn-outline btn-sm"
                     style={{ fontFamily: 'var(--sidebar-font)', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none', borderColor: 'rgba(200,241,53,0.3)', color: 'var(--accent)' }}>
                     <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                      <polyline points="15 3 21 3 21 9"/>
-                      <line x1="10" y1="14" x2="21" y2="3"/>
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                      <polyline points="15 3 21 3 21 9" />
+                      <line x1="10" y1="14" x2="21" y2="3" />
                     </svg>
                     Preview portal
                   </a>
@@ -538,14 +535,14 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
 
                       {msg.emailSent && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--sidebar-font)', fontSize: 12, color: '#4ade80', marginTop: 10, padding: '6px 10px', background: '#0d2e14', borderRadius: 6, border: '1px solid #1a4a24', width: 'fit-content', fontWeight: 500 }}>
-                          <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+                          <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></svg>
                           Email sent
                         </div>
                       )}
 
                       {msg.calendarEvent && (
                         <div style={{ marginTop: 10, padding: '10px 14px', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <svg width="14" height="14" fill="none" stroke="#3b82f6" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                          <svg width="14" height="14" fill="none" stroke="#3b82f6" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
                           <div style={{ flex: 1 }}>
                             <div style={{ fontFamily: 'var(--sidebar-font)', fontSize: 12, color: '#3b82f6', marginBottom: 2, fontWeight: 600 }}>Added to calendar</div>
                             <div style={{ fontSize: 13, fontWeight: 500, fontFamily: 'var(--sidebar-font)' }}>{(msg.calendarEvent as Record<string, unknown>).title as string}</div>
@@ -564,12 +561,12 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
                         <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                           <button onClick={() => viewDocument(msg.documentId!, msg.documentType!, msg.invoiceHTML)}
                             style={{ fontFamily: 'var(--sidebar-font)', fontSize: 12, padding: '7px 14px', background: 'var(--fg)', color: 'var(--bg)', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
                             View {msg.documentType}
                           </button>
                           <button onClick={() => { const win = window.open('', '_blank'); if (win && msg.invoiceHTML) { win.document.write(msg.invoiceHTML); win.document.close(); win.print() } }}
                             style={{ fontFamily: 'var(--sidebar-font)', fontSize: 12, padding: '7px 14px', background: '#c8f135', color: '#0a0a0a', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                            <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="8" /></svg>
                             Print / PDF
                           </button>
                         </div>
