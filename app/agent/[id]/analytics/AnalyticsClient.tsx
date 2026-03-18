@@ -4,16 +4,23 @@ import Navbar from '@/components/Navbar'
 import { useRouter } from 'next/navigation'
 
 export default function AnalyticsClient({
-  agent, runs, documents, contacts, memories, events, knowledge, teamMembers
+  agent,
+  runs = [],
+  documents = [],
+  contacts = [],
+  memories = [],
+  events = [],
+  knowledge = [],
+  teamMembers = [],
 }: {
   agent: Record<string, unknown>
-  runs: Record<string, unknown>[]
-  documents: Record<string, unknown>[]
-  contacts: Record<string, unknown>[]
-  memories: Record<string, unknown>[]
-  events: Record<string, unknown>[]
-  knowledge: Record<string, unknown>[]
-  teamMembers: Record<string, unknown>[]
+  runs?: Record<string, unknown>[]
+  documents?: Record<string, unknown>[]
+  contacts?: Record<string, unknown>[]
+  memories?: Record<string, unknown>[]
+  events?: Record<string, unknown>[]
+  knowledge?: Record<string, unknown>[]
+  teamMembers?: Record<string, unknown>[]
 }) {
   const router = useRouter()
   const [period, setPeriod] = useState<'7' | '30' | 'all'>('30')
