@@ -12,9 +12,19 @@ type PanelType =
   | 'calendar' | 'conversations' | 'memory' | 'team'
   | 'documents' | 'portal-preview'
 
-interface PanelSlot {
+type ResizeHandle = 'n' | 's' | 'e' | 'w' | 'nw' | 'ne' | 'sw' | 'se'
+
+interface PanelInstance {
   id: string
-  type: PanelType | null
+  type: PanelType
+  x: number
+  y: number
+  width: number
+  height: number
+  zIndex: number
+  isMinimized: boolean
+  isMaximized: boolean
+  refreshKey: number
 }
 
 interface Agent {
@@ -33,6 +43,8 @@ interface PanelDef {
   label: string
   desc: string
   icon: React.ReactNode
+  defaultW: number
+  defaultH: number
 }
 
 function Ico({ d, size = 13 }: { d: string; size?: number }) {
@@ -44,28 +56,43 @@ function Ico({ d, size = 13 }: { d: string; size?: number }) {
 }
 
 const PANEL_DEFS: PanelDef[] = [
-  { type: 'chat',          label: 'Chat',                desc: 'Live agent chat interface',       icon: <Ico d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /> },
-  { type: 'dashboard',     label: 'Dashboard',           desc: 'Agent overview & health score',   icon: <Ico d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z" /> },
-  { type: 'knowledge',     label: 'Knowledge Base',      desc: 'View and add KB entries',         icon: <Ico d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 0 3-3h7z" /> },
-  { type: 'contacts',      label: 'Contacts',            desc: 'Searchable contacts list',        icon: <Ico d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" /> },
-  { type: 'orders',        label: 'Orders',              desc: 'Orders with status badges',       icon: <Ico d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0" /> },
-  { type: 'quotes',        label: 'Quotes',              desc: 'Quotes and proposals list',       icon: <Ico d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8" /> },
-  { type: 'automations',   label: 'Automations',         desc: 'Scheduled automation tasks',      icon: <Ico d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /> },
-  { type: 'analytics',     label: 'Analytics',           desc: 'Key stats and metrics',           icon: <Ico d="M18 20V10M12 20V4M6 20v-6" /> },
-  { type: 'calendar',      label: 'Calendar',            desc: 'Upcoming events',                 icon: <Ico d="M8 2v4M16 2v4M3 10h18M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z" /> },
-  { type: 'conversations', label: 'Portal Conversations',desc: 'Customer chat history',           icon: <Ico d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" /> },
-  { type: 'memory',        label: 'Memory',              desc: 'Agent memory entries',            icon: <Ico d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 6v4l3 3" /> },
-  { type: 'team',          label: 'Team',                desc: 'Team members list',               icon: <Ico d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /> },
-  { type: 'documents',     label: 'Documents',           desc: 'Generated documents list',        icon: <Ico d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8" /> },
-  { type: 'portal-preview',label: 'Portal Preview',      desc: 'Live customer portal preview',    icon: <Ico d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /> },
+  { type: 'chat',           label: 'Chat',                desc: 'Live agent chat interface',       icon: <Ico d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />,                                                                             defaultW: 400, defaultH: 500 },
+  { type: 'dashboard',      label: 'Dashboard',           desc: 'Agent overview & health score',   icon: <Ico d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z" />,                                                                                     defaultW: 500, defaultH: 400 },
+  { type: 'knowledge',      label: 'Knowledge Base',      desc: 'View and add KB entries',         icon: <Ico d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 0 3-3h7z" />,                                                    defaultW: 450, defaultH: 500 },
+  { type: 'contacts',       label: 'Contacts',            desc: 'Searchable contacts list',        icon: <Ico d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" />,                                                           defaultW: 400, defaultH: 500 },
+  { type: 'orders',         label: 'Orders',              desc: 'Orders with status badges',       icon: <Ico d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0" />,                                                         defaultW: 600, defaultH: 350 },
+  { type: 'quotes',         label: 'Quotes',              desc: 'Quotes and proposals list',       icon: <Ico d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8" />,                                            defaultW: 600, defaultH: 350 },
+  { type: 'automations',    label: 'Automations',         desc: 'Scheduled automation tasks',      icon: <Ico d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />,                                                                                            defaultW: 500, defaultH: 350 },
+  { type: 'analytics',      label: 'Analytics',           desc: 'Key stats and metrics',           icon: <Ico d="M18 20V10M12 20V4M6 20v-6" />,                                                                                                               defaultW: 600, defaultH: 400 },
+  { type: 'calendar',       label: 'Calendar',            desc: 'Upcoming events',                 icon: <Ico d="M8 2v4M16 2v4M3 10h18M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z" />,                                          defaultW: 350, defaultH: 450 },
+  { type: 'conversations',  label: 'Portal Conversations',desc: 'Customer chat history',           icon: <Ico d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />, defaultW: 500, defaultH: 400 },
+  { type: 'memory',         label: 'Memory',              desc: 'Agent memory entries',            icon: <Ico d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 6v4l3 3" />,                                                                                     defaultW: 400, defaultH: 400 },
+  { type: 'team',           label: 'Team',                desc: 'Team members list',               icon: <Ico d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />,      defaultW: 400, defaultH: 350 },
+  { type: 'documents',      label: 'Documents',           desc: 'Generated documents list',        icon: <Ico d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8" />,                                                    defaultW: 500, defaultH: 350 },
+  { type: 'portal-preview', label: 'Portal Preview',      desc: 'Live customer portal preview',    icon: <Ico d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />,                                                                                         defaultW: 600, defaultH: 500 },
 ]
 
-// ─── Utilities ────────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 function genId() { return Math.random().toString(36).slice(2, 10) }
-function mkSlots(n: number): PanelSlot[] { return Array.from({ length: n }, () => ({ id: genId(), type: null })) }
+const STORAGE_KEY = 'agentboard-desktop-v3'
+const MIN_W = 280
+const MIN_H = 200
+const HEADER_H = 40
+const TOOLBAR_H = 52
 
-const STORAGE_KEY = 'agentboard-desktop-v2'
+const HANDLE_CURSORS: Record<ResizeHandle, string> = {
+  n: 'n-resize', s: 's-resize', e: 'e-resize', w: 'w-resize',
+  nw: 'nw-resize', ne: 'ne-resize', sw: 'sw-resize', se: 'se-resize',
+}
+
+function makeDefaultPanels(): PanelInstance[] {
+  return [
+    { id: genId(), type: 'chat',     x: 20,  y: 20,  width: 400, height: 500, zIndex: 1, isMinimized: false, isMaximized: false, refreshKey: 0 },
+    { id: genId(), type: 'orders',   x: 440, y: 20,  width: 600, height: 350, zIndex: 2, isMinimized: false, isMaximized: false, refreshKey: 0 },
+    { id: genId(), type: 'calendar', x: 440, y: 390, width: 350, height: 450, zIndex: 3, isMinimized: false, isMaximized: false, refreshKey: 0 },
+  ]
+}
 
 // ─── Shimmer ──────────────────────────────────────────────────────────────────
 
@@ -85,99 +112,6 @@ function Empty({ label }: { label: string }) {
   return (
     <div style={{ textAlign: 'center', color: '#3a3a3a', fontFamily: 'var(--mono)', fontSize: 11, padding: '32px 16px' }}>
       {label}
-    </div>
-  )
-}
-
-// ─── Panel wrapper ────────────────────────────────────────────────────────────
-
-function PanelWrapper({ type, agentId, onClose }: { type: PanelType; agentId: string; onClose: () => void }) {
-  const [refreshKey, setRefreshKey] = useState(0)
-  const def = PANEL_DEFS.find(p => p.type === type)!
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', background: '#111111', border: '1px solid #1e1e1e', borderRadius: 12, overflow: 'hidden', height: '100%' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderBottom: '1px solid #1a1a1a', flexShrink: 0, background: '#0d0d0d' }}>
-        <span style={{ color: '#444', display: 'flex' }}>{def.icon}</span>
-        <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, color: '#666', letterSpacing: 1.2, textTransform: 'uppercase', flex: 1 }}>{def.label}</span>
-        <button onClick={() => setRefreshKey(k => k + 1)} title="Refresh"
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#444', padding: 3, borderRadius: 4, display: 'flex' }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#aaa')}
-          onMouseLeave={e => (e.currentTarget.style.color = '#444')}>
-          <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>
-          </svg>
-        </button>
-        <button onClick={onClose} title="Remove panel"
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#444', padding: 3, borderRadius: 4, display: 'flex' }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
-          onMouseLeave={e => (e.currentTarget.style.color = '#444')}>
-          <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
-      </div>
-      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
-        <PanelContent key={`${type}-${agentId}-${refreshKey}`} type={type} agentId={agentId} />
-      </div>
-    </div>
-  )
-}
-
-// ─── Empty slot ───────────────────────────────────────────────────────────────
-
-function EmptySlot({ onAdd }: { onAdd: () => void }) {
-  const [hov, setHov] = useState(false)
-  return (
-    <button onClick={onAdd} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-      style={{ width: '100%', height: '100%', minHeight: 180, background: hov ? 'rgba(200,241,53,0.02)' : 'transparent', border: `2px dashed ${hov ? 'rgba(200,241,53,0.25)' : '#1e1e1e'}`, borderRadius: 12, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, transition: 'all 0.15s' }}>
-      <div style={{ width: 38, height: 38, borderRadius: '50%', background: hov ? 'rgba(200,241,53,0.08)' : 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: hov ? '#c8f135' : '#333', transition: 'all 0.15s' }}>
-        <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-      </div>
-      <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: hov ? '#c8f135' : '#333', letterSpacing: 0.5, transition: 'all 0.15s' }}>Add panel</span>
-    </button>
-  )
-}
-
-// ─── Panel picker modal ───────────────────────────────────────────────────────
-
-function PanelPicker({ onSelect, onClose }: { onSelect: (t: PanelType) => void; onClose: () => void }) {
-  return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}
-      onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background: '#111111', border: '1px solid #2a2a2a', borderRadius: 16, padding: 24, width: 560, maxHeight: '80vh', overflow: 'auto', boxShadow: '0 24px 80px rgba(0,0,0,0.7)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
-          <div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 14, fontWeight: 700, color: '#eee', marginBottom: 4 }}>Choose a panel</div>
-            <div style={{ fontSize: 12, color: '#444' }}>Select what to display in this slot</div>
-          </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#444', padding: 4, display: 'flex' }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#aaa')}
-            onMouseLeave={e => (e.currentTarget.style.color = '#444')}>
-            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
-          {PANEL_DEFS.map(def => (
-            <button key={def.type} onClick={() => onSelect(def.type)}
-              style={{ background: '#0d0d0d', border: '1px solid #1e1e1e', borderRadius: 10, padding: '13px 15px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left', transition: 'all 0.15s' }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(200,241,53,0.35)'; e.currentTarget.style.background = 'rgba(200,241,53,0.03)' }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = '#1e1e1e'; e.currentTarget.style.background = '#0d0d0d' }}>
-              <div style={{ width: 34, height: 34, borderRadius: 8, background: 'rgba(200,241,53,0.08)', color: '#c8f135', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                {def.icon}
-              </div>
-              <div>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, color: '#ddd', marginBottom: 3 }}>{def.label}</div>
-                <div style={{ fontSize: 11, color: '#444', lineHeight: 1.4 }}>{def.desc}</div>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
     </div>
   )
 }
@@ -896,22 +830,231 @@ function PortalPreviewContent({ agentId }: { agentId: string }) {
 
 function PanelContent({ type, agentId }: { type: PanelType; agentId: string }) {
   switch (type) {
-    case 'chat':          return <ChatContent agentId={agentId} />
-    case 'dashboard':     return <DashboardContent agentId={agentId} />
-    case 'knowledge':     return <KnowledgeContent agentId={agentId} />
-    case 'contacts':      return <ContactsContent agentId={agentId} />
-    case 'orders':        return <OrdersContent agentId={agentId} />
-    case 'quotes':        return <QuotesContent agentId={agentId} />
-    case 'automations':   return <AutomationsContent agentId={agentId} />
-    case 'analytics':     return <AnalyticsContent agentId={agentId} />
-    case 'calendar':      return <CalendarContent agentId={agentId} />
-    case 'conversations': return <ConversationsContent agentId={agentId} />
-    case 'memory':        return <MemoryContent agentId={agentId} />
-    case 'team':          return <TeamContent agentId={agentId} />
-    case 'documents':     return <DocumentsContent agentId={agentId} />
-    case 'portal-preview':return <PortalPreviewContent agentId={agentId} />
-    default:              return null
+    case 'chat':           return <ChatContent agentId={agentId} />
+    case 'dashboard':      return <DashboardContent agentId={agentId} />
+    case 'knowledge':      return <KnowledgeContent agentId={agentId} />
+    case 'contacts':       return <ContactsContent agentId={agentId} />
+    case 'orders':         return <OrdersContent agentId={agentId} />
+    case 'quotes':         return <QuotesContent agentId={agentId} />
+    case 'automations':    return <AutomationsContent agentId={agentId} />
+    case 'analytics':      return <AnalyticsContent agentId={agentId} />
+    case 'calendar':       return <CalendarContent agentId={agentId} />
+    case 'conversations':  return <ConversationsContent agentId={agentId} />
+    case 'memory':         return <MemoryContent agentId={agentId} />
+    case 'team':           return <TeamContent agentId={agentId} />
+    case 'documents':      return <DocumentsContent agentId={agentId} />
+    case 'portal-preview': return <PortalPreviewContent agentId={agentId} />
+    default:               return null
   }
+}
+
+// ─── Panel picker modal ───────────────────────────────────────────────────────
+
+function PanelPicker({ onSelect, onClose }: { onSelect: (t: PanelType) => void; onClose: () => void }) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999 }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{ background: '#111111', border: '1px solid #2a2a2a', borderRadius: 16, padding: 24, width: 640, maxHeight: '80vh', overflow: 'auto', boxShadow: '0 24px 80px rgba(0,0,0,0.7)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+          <div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 14, fontWeight: 700, color: '#eee', marginBottom: 4 }}>Add panel</div>
+            <div style={{ fontSize: 12, color: '#444' }}>Choose what to display</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#444', padding: 4, display: 'flex' }}
+            onMouseEnter={e => (e.currentTarget.style.color = '#aaa')}
+            onMouseLeave={e => (e.currentTarget.style.color = '#444')}>
+            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+          {PANEL_DEFS.map(def => (
+            <button key={def.type} onClick={() => onSelect(def.type)}
+              style={{ background: '#0d0d0d', border: '1px solid #1e1e1e', borderRadius: 10, padding: '12px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left', transition: 'all 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(200,241,53,0.4)'; e.currentTarget.style.background = 'rgba(200,241,53,0.03)' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = '#1e1e1e'; e.currentTarget.style.background = '#0d0d0d' }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(200,241,53,0.08)', color: '#c8f135', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                {def.icon}
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, color: '#ddd', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{def.label}</div>
+                <div style={{ fontSize: 10, color: '#444', lineHeight: 1.4 }}>{def.desc}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Floating panel ───────────────────────────────────────────────────────────
+
+interface FloatingPanelProps {
+  panel: PanelInstance
+  agentId: string
+  isDragging: boolean
+  onMouseDownPanel: (e: React.MouseEvent) => void
+  onMouseDownHeader: (e: React.MouseEvent) => void
+  onMouseDownHandle: (e: React.MouseEvent, handle: ResizeHandle) => void
+  onClose: () => void
+  onRefresh: () => void
+  onToggleMinimize: () => void
+  onToggleMaximize: () => void
+  panelRef: (el: HTMLDivElement | null) => void
+}
+
+function FloatingPanel({
+  panel, agentId, isDragging,
+  onMouseDownPanel, onMouseDownHeader, onMouseDownHandle,
+  onClose, onRefresh, onToggleMinimize, onToggleMaximize, panelRef,
+}: FloatingPanelProps) {
+  const def = PANEL_DEFS.find(p => p.type === panel.type)!
+
+  const panelStyle: React.CSSProperties = panel.isMaximized
+    ? {
+        position: 'fixed',
+        left: 0,
+        top: TOOLBAR_H,
+        width: '100vw',
+        height: `calc(100vh - ${TOOLBAR_H}px)`,
+        zIndex: 99998,
+        background: '#111111',
+        border: '1px solid #333',
+        borderRadius: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        boxShadow: 'none',
+      }
+    : {
+        position: 'absolute',
+        left: panel.x,
+        top: panel.y,
+        width: panel.width,
+        height: panel.isMinimized ? HEADER_H : panel.height,
+        zIndex: panel.zIndex,
+        background: '#111111',
+        border: `1px solid ${isDragging ? 'rgba(200,241,53,0.3)' : '#222222'}`,
+        borderRadius: 10,
+        display: 'flex',
+        flexDirection: 'column',
+        boxShadow: isDragging ? '0 16px 48px rgba(0,0,0,0.6)' : '0 8px 32px rgba(0,0,0,0.4)',
+        overflow: 'hidden',
+        transition: isDragging ? 'none' : 'box-shadow 0.15s, border-color 0.15s',
+      }
+
+  return (
+    <div ref={panelRef} style={panelStyle} onMouseDown={onMouseDownPanel}>
+
+      {/* ── Header ── */}
+      <div
+        onMouseDown={onMouseDownHeader}
+        onDoubleClick={onToggleMaximize}
+        style={{
+          height: HEADER_H,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 7,
+          padding: '0 8px 0 12px',
+          borderBottom: panel.isMinimized ? 'none' : '1px solid #1a1a1a',
+          flexShrink: 0,
+          background: '#161616',
+          cursor: 'grab',
+          userSelect: 'none',
+          borderRadius: panel.isMinimized ? 10 : '10px 10px 0 0',
+        }}>
+        <span style={{ color: '#555', display: 'flex', flexShrink: 0 }}>{def.icon}</span>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, color: '#ededed', letterSpacing: 0.8, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {def.label}
+        </span>
+
+        {/* Refresh */}
+        <button
+          onClick={e => { e.stopPropagation(); onRefresh() }}
+          title="Refresh"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3a3a3a', padding: '3px 4px', borderRadius: 4, display: 'flex', flexShrink: 0 }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#888')}
+          onMouseLeave={e => (e.currentTarget.style.color = '#3a3a3a')}>
+          <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+            <path d="M21 3v5h-5"/>
+            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+            <path d="M8 16H3v5"/>
+          </svg>
+        </button>
+
+        {/* Minimize */}
+        <button
+          onClick={e => { e.stopPropagation(); onToggleMinimize() }}
+          title={panel.isMinimized ? 'Restore' : 'Minimize'}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3a3a3a', padding: '3px 4px', borderRadius: 4, display: 'flex', flexShrink: 0 }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#888')}
+          onMouseLeave={e => (e.currentTarget.style.color = '#3a3a3a')}>
+          {panel.isMinimized
+            ? <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+            : <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          }
+        </button>
+
+        {/* Maximize */}
+        <button
+          onClick={e => { e.stopPropagation(); onToggleMaximize() }}
+          title={panel.isMaximized ? 'Restore' : 'Maximize'}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3a3a3a', padding: '3px 4px', borderRadius: 4, display: 'flex', flexShrink: 0 }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#888')}
+          onMouseLeave={e => (e.currentTarget.style.color = '#3a3a3a')}>
+          {panel.isMaximized
+            ? <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="8 3 3 3 3 8"/><polyline points="21 8 21 3 16 3"/><polyline points="3 16 3 21 8 21"/><polyline points="16 21 21 21 21 16"/></svg>
+            : <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+          }
+        </button>
+
+        {/* Close */}
+        <button
+          onClick={e => { e.stopPropagation(); onClose() }}
+          title="Close"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3a3a3a', padding: '3px 4px', borderRadius: 4, display: 'flex', flexShrink: 0 }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
+          onMouseLeave={e => (e.currentTarget.style.color = '#3a3a3a')}>
+          <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      {/* ── Content ── */}
+      {!panel.isMinimized && (
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+            <PanelContent key={`${panel.type}-${agentId}-${panel.refreshKey}`} type={panel.type} agentId={agentId} />
+          </div>
+        </div>
+      )}
+
+      {/* ── Resize handles (8 — only when not minimized or maximized) ── */}
+      {!panel.isMinimized && !panel.isMaximized && (
+        <>
+          {/* Corners */}
+          {(['nw', 'ne', 'sw', 'se'] as ResizeHandle[]).map(h => (
+            <div key={h} onMouseDown={e => { e.stopPropagation(); onMouseDownHandle(e, h) }}
+              style={{
+                position: 'absolute',
+                width: 10, height: 10,
+                zIndex: 20,
+                cursor: HANDLE_CURSORS[h],
+                ...(h === 'nw' ? { top: 0, left: 0 } : h === 'ne' ? { top: 0, right: 0 } : h === 'sw' ? { bottom: 0, left: 0 } : { bottom: 0, right: 0 }),
+              }} />
+          ))}
+          {/* Edges */}
+          <div onMouseDown={e => { e.stopPropagation(); onMouseDownHandle(e, 'n') }}  style={{ position: 'absolute', top: 0,    left: 10, right: 10,         height: 4,  cursor: 'n-resize',  zIndex: 20 }} />
+          <div onMouseDown={e => { e.stopPropagation(); onMouseDownHandle(e, 's') }}  style={{ position: 'absolute', bottom: 0, left: 10, right: 10,         height: 4,  cursor: 's-resize',  zIndex: 20 }} />
+          <div onMouseDown={e => { e.stopPropagation(); onMouseDownHandle(e, 'e') }}  style={{ position: 'absolute', right: 0,  top: 10,  bottom: 10,        width: 4,   cursor: 'e-resize',  zIndex: 20 }} />
+          <div onMouseDown={e => { e.stopPropagation(); onMouseDownHandle(e, 'w') }}  style={{ position: 'absolute', left: 0,   top: 10,  bottom: 10,        width: 4,   cursor: 'w-resize',  zIndex: 20 }} />
+        </>
+      )}
+    </div>
+  )
 }
 
 // ─── Main page (inner — needs useSearchParams) ────────────────────────────────
@@ -926,94 +1069,286 @@ function DesktopModeInner() {
   const [pageLoading, setPageLoading] = useState(true)
   const [pageError, setPageError] = useState<string | null>(null)
   const [time, setTime] = useState(new Date())
-  const [slots, setSlots] = useState<PanelSlot[]>(() => mkSlots(4))
-  const [columns, setColumns] = useState<2 | 3>(2)
-  const [pickerSlotId, setPickerSlotId] = useState<string | null>(null)
+  const [panels, setPanels] = useState<PanelInstance[]>([])
+  const [showPicker, setShowPicker] = useState(false)
+  const [draggingId, setDraggingId] = useState<string | null>(null)
 
-  // Electron guard
+  // Drag/resize state — never triggers re-renders
+  const dragRef = useRef<{
+    type: 'drag' | 'resize'
+    panelId: string
+    handle?: ResizeHandle
+    startX: number
+    startY: number
+    origX: number
+    origY: number
+    origW: number
+    origH: number
+    rafId: number | null
+    pendingX: number
+    pendingY: number
+    pendingW: number
+    pendingH: number
+  } | null>(null)
+
+  const panelRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+
+  // ── Electron guard ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (typeof window !== 'undefined' && !window.navigator.userAgent.includes('Electron')) {
       router.replace('/dashboard')
     }
   }, [router])
 
-  // Clock
+  // ── Clock ───────────────────────────────────────────────────────────────────
   useEffect(() => {
     const t = setInterval(() => setTime(new Date()), 1000)
     return () => clearInterval(t)
   }, [])
 
-  // Load agents + restore layout
+  // ── Load ────────────────────────────────────────────────────────────────────
   useEffect(() => {
     document.title = 'Desktop Mode | AgentBoard'
     const init = async () => {
-      // Debug: log URL params
-      console.log('[DesktopMode] searchParams:', Object.fromEntries(searchParams.entries()))
       console.log('[DesktopMode] urlAgentId:', urlAgentId)
+      if (!urlAgentId) { router.replace('/dashboard'); return }
 
-      // Require agentId in URL
-      if (!urlAgentId) {
-        console.warn('[DesktopMode] No agentId in URL, redirecting to dashboard')
-        router.replace('/dashboard')
-        return
-      }
-
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
-      console.log('[DesktopMode] user:', user?.id, 'userError:', userError)
+      const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/auth'); return }
 
-      // Fetch the specific agent directly by id — RLS handles security, no user_id filter needed
       const { data: agent, error: agentError } = await supabase
         .from('business_agents').select('*').eq('id', urlAgentId).single()
       console.log('[DesktopMode] agent fetch result:', agent, 'error:', agentError)
 
       if (!agent) {
-        const msg = agentError?.message || 'No data returned'
-        console.error('[DesktopMode] Agent not found. agentId:', urlAgentId, 'error:', msg)
-        setPageError(`Could not load agent (id: ${urlAgentId}). ${msg}`)
+        setPageError(`Could not load agent (id: ${urlAgentId}). ${agentError?.message || 'No data returned'}`)
         setPageLoading(false)
         return
       }
 
-      // Fetch all user's agents for the dropdown
-      const { data: agentsList, error: listError } = await supabase
+      const { data: agentsList } = await supabase
         .from('business_agents').select('id, agent_name, business_name, portal_color, greeting, system_prompt')
         .eq('user_id', user.id).order('created_at', { ascending: false })
-      console.log('[DesktopMode] agents list count:', agentsList?.length, 'listError:', listError)
 
-      // Build list — ensure the URL agent is included even if not in the user's list
       const list = (agentsList || []) as Agent[]
-      if (!list.find(a => a.id === urlAgentId)) {
-        list.unshift(agent as Agent)
-      }
+      if (!list.find(a => a.id === urlAgentId)) list.unshift(agent as Agent)
       setAgents(list)
-
-      // URL agent always wins as selected
       setSelectedAgentId(urlAgentId)
+
       try {
         const saved = localStorage.getItem(STORAGE_KEY)
         if (saved) {
           const parsed = JSON.parse(saved)
-          if (Array.isArray(parsed.slots) && parsed.slots.length > 0) setSlots(parsed.slots)
-          if (parsed.columns === 2 || parsed.columns === 3) setColumns(parsed.columns)
+          if (Array.isArray(parsed.panels) && parsed.panels.length > 0) {
+            setPanels(parsed.panels)
+          } else {
+            setPanels(makeDefaultPanels())
+          }
+        } else {
+          setPanels(makeDefaultPanels())
         }
-      } catch { /* ignore */ }
+      } catch {
+        setPanels(makeDefaultPanels())
+      }
 
       setPageLoading(false)
     }
     init()
   }, [router, urlAgentId, searchParams])
 
-  // Persist layout
+  // ── Global mousemove / mouseup for drag & resize ────────────────────────────
   useEffect(() => {
-    if (pageLoading) return
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ slots, columns, agentId: selectedAgentId })) } catch { /* ignore */ }
-  }, [slots, columns, selectedAgentId, pageLoading])
+    const applyDom = () => {
+      const d = dragRef.current
+      if (!d) return
+      const el = panelRefs.current.get(d.panelId)
+      if (!el) return
 
-  const addRow = () => setSlots(prev => [...prev, ...mkSlots(columns)])
-  const removePanel = (id: string) => setSlots(prev => prev.map(s => s.id === id ? { ...s, type: null } : s))
-  const setPanel = (slotId: string, type: PanelType) => { setSlots(prev => prev.map(s => s.id === slotId ? { ...s, type } : s)); setPickerSlotId(null) }
-  const resetLayout = () => { setSlots(mkSlots(4)); setColumns(2) }
+      if (d.type === 'drag') {
+        el.style.left = `${d.pendingX}px`
+        el.style.top  = `${d.pendingY}px`
+      } else {
+        el.style.left   = `${d.pendingX}px`
+        el.style.top    = `${d.pendingY}px`
+        el.style.width  = `${d.pendingW}px`
+        el.style.height = `${d.pendingH}px`
+      }
+      d.rafId = null
+    }
+
+    const onMouseMove = (e: MouseEvent) => {
+      const d = dragRef.current
+      if (!d) return
+
+      const dx = e.clientX - d.startX
+      const dy = e.clientY - d.startY
+
+      if (d.type === 'drag') {
+        d.pendingX = Math.max(0, d.origX + dx)
+        d.pendingY = Math.max(0, d.origY + dy)
+      } else if (d.type === 'resize' && d.handle) {
+        const h = d.handle
+        let newX = d.origX, newY = d.origY
+        let newW = d.origW, newH = d.origH
+
+        if (h.includes('e')) newW = Math.max(MIN_W, d.origW + dx)
+        if (h.includes('w')) { newW = Math.max(MIN_W, d.origW - dx); newX = d.origX + (d.origW - newW) }
+        if (h.includes('s')) newH = Math.max(MIN_H, d.origH + dy)
+        if (h.includes('n')) { newH = Math.max(MIN_H, d.origH - dy); newY = d.origY + (d.origH - newH) }
+
+        d.pendingX = newX
+        d.pendingY = newY
+        d.pendingW = newW
+        d.pendingH = newH
+      }
+
+      if (d.rafId === null) {
+        d.rafId = requestAnimationFrame(applyDom)
+      }
+    }
+
+    const onMouseUp = () => {
+      const d = dragRef.current
+      if (!d) return
+
+      if (d.rafId !== null) {
+        cancelAnimationFrame(d.rafId)
+        d.rafId = null
+      }
+
+      // Final DOM apply
+      const el = panelRefs.current.get(d.panelId)
+      if (el) {
+        if (d.type === 'drag') {
+          el.style.left = `${d.pendingX}px`
+          el.style.top  = `${d.pendingY}px`
+        } else {
+          el.style.left   = `${d.pendingX}px`
+          el.style.top    = `${d.pendingY}px`
+          el.style.width  = `${d.pendingW}px`
+          el.style.height = `${d.pendingH}px`
+        }
+      }
+
+      // Commit to React state
+      const finalX = d.pendingX
+      const finalY = d.pendingY
+      const finalW = d.pendingW
+      const finalH = d.pendingH
+      const panelId = d.panelId
+      const opType = d.type
+
+      dragRef.current = null
+      setDraggingId(null)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+
+      setPanels(prev => prev.map(p => {
+        if (p.id !== panelId) return p
+        if (opType === 'drag') return { ...p, x: finalX, y: finalY }
+        return { ...p, x: finalX, y: finalY, width: finalW, height: finalH }
+      }))
+    }
+
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+    }
+  }, [])
+
+  // ── Panel actions ───────────────────────────────────────────────────────────
+
+  const bringToFront = useCallback((panelId: string) => {
+    setPanels(prev => {
+      const maxZ = Math.max(0, ...prev.map(p => p.zIndex))
+      const target = prev.find(p => p.id === panelId)
+      if (!target || target.zIndex === maxZ) return prev
+      return prev.map(p => p.id === panelId ? { ...p, zIndex: maxZ + 1 } : p)
+    })
+  }, [])
+
+  const startDrag = useCallback((e: React.MouseEvent, panel: PanelInstance) => {
+    if (panel.isMaximized) return
+    e.preventDefault()
+    document.body.style.cursor = 'grabbing'
+    document.body.style.userSelect = 'none'
+    dragRef.current = {
+      type: 'drag',
+      panelId: panel.id,
+      startX: e.clientX,
+      startY: e.clientY,
+      origX: panel.x,
+      origY: panel.y,
+      origW: panel.width,
+      origH: panel.height,
+      rafId: null,
+      pendingX: panel.x,
+      pendingY: panel.y,
+      pendingW: panel.width,
+      pendingH: panel.height,
+    }
+    setDraggingId(panel.id)
+  }, [])
+
+  const startResize = useCallback((e: React.MouseEvent, panel: PanelInstance, handle: ResizeHandle) => {
+    e.preventDefault()
+    document.body.style.cursor = HANDLE_CURSORS[handle]
+    document.body.style.userSelect = 'none'
+    dragRef.current = {
+      type: 'resize',
+      panelId: panel.id,
+      handle,
+      startX: e.clientX,
+      startY: e.clientY,
+      origX: panel.x,
+      origY: panel.y,
+      origW: panel.width,
+      origH: panel.height,
+      rafId: null,
+      pendingX: panel.x,
+      pendingY: panel.y,
+      pendingW: panel.width,
+      pendingH: panel.height,
+    }
+    setDraggingId(panel.id)
+  }, [])
+
+  const closePanel      = useCallback((id: string) => setPanels(prev => prev.filter(p => p.id !== id)), [])
+  const refreshPanel    = useCallback((id: string) => setPanels(prev => prev.map(p => p.id === id ? { ...p, refreshKey: p.refreshKey + 1 } : p)), [])
+  const toggleMinimize  = useCallback((id: string) => setPanels(prev => prev.map(p => p.id === id ? { ...p, isMinimized: !p.isMinimized, isMaximized: false } : p)), [])
+  const toggleMaximize  = useCallback((id: string) => setPanels(prev => prev.map(p => p.id === id ? { ...p, isMaximized: !p.isMaximized, isMinimized: false } : p)), [])
+
+  const addPanel = useCallback((type: PanelType) => {
+    const def = PANEL_DEFS.find(d => d.type === type)!
+    setPanels(prev => {
+      const maxZ = Math.max(0, ...prev.map(p => p.zIndex))
+      const offset = (prev.length % 10) * 28
+      return [...prev, {
+        id: genId(),
+        type,
+        x: 80 + offset,
+        y: 80 + offset,
+        width: def.defaultW,
+        height: def.defaultH,
+        zIndex: maxZ + 1,
+        isMinimized: false,
+        isMaximized: false,
+        refreshKey: 0,
+      }]
+    })
+    setShowPicker(false)
+  }, [])
+
+  const saveLayout = useCallback(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ panels }))
+    } catch { /* ignore */ }
+  }, [panels])
+
+  const resetLayout = useCallback(() => setPanels(makeDefaultPanels()), [])
+
   const exit = () => {
     const w = window as Window & { electronAPI?: { closeWindow?: () => void } }
     if (w.electronAPI?.closeWindow) w.electronAPI.closeWindow()
@@ -1022,14 +1357,16 @@ function DesktopModeInner() {
 
   const selectedAgent = agents.find(a => a.id === selectedAgentId)
 
+  // ── Loading / error ─────────────────────────────────────────────────────────
+
   if (pageLoading) return (
-    <div style={{ background: '#0a0a0a', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ background: '#080808', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: '#444' }}>Loading desktop mode…</span>
     </div>
   )
 
   if (pageError) return (
-    <div style={{ background: '#0a0a0a', height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+    <div style={{ background: '#080808', height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
       <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444' }}>
         <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
       </div>
@@ -1041,10 +1378,10 @@ function DesktopModeInner() {
     </div>
   )
 
-  const rowHeight = `calc((100vh - 52px - 20px - ${Math.max(0, Math.ceil(slots.length / columns) - 1) * 10}px) / 2)`
+  // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ background: '#0a0a0a', height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div style={{ background: '#080808', height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <style>{`
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
         * { box-sizing: border-box; }
@@ -1054,9 +1391,19 @@ function DesktopModeInner() {
       `}</style>
 
       {/* ── Toolbar ── */}
-      <div style={{ height: 52, background: '#0d0d0d', borderBottom: '1px solid #1a1a1a', display: 'flex', alignItems: 'center', padding: '0 16px', gap: 10, flexShrink: 0, WebkitAppRegion: 'drag' } as React.CSSProperties}>
+      <div style={{
+        height: TOOLBAR_H,
+        background: '#0a0a0a',
+        borderBottom: '1px solid #222222',
+        display: 'flex',
+        alignItems: 'center',
+        padding: '0 16px',
+        gap: 12,
+        flexShrink: 0,
+        WebkitAppRegion: 'drag',
+      } as React.CSSProperties}>
 
-        {/* Logo */}
+        {/* Left: logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <div style={{ width: 24, height: 24, background: '#c8f135', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="12" height="12" fill="#0a0a0a" viewBox="0 0 24 24"><path d="m13 2-2 2.5h3L12 7l1 1-2.5 3H14l-5 11 1-7H7l5-13z"/></svg>
@@ -1065,13 +1412,13 @@ function DesktopModeInner() {
           <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: '#3a3a3a', padding: '2px 6px', background: '#141414', borderRadius: 4, letterSpacing: 0.5 }}>DESKTOP</span>
         </div>
 
-        <div style={{ width: 1, height: 18, background: '#1e1e1e', flexShrink: 0 }} />
+        <div style={{ width: 1, height: 18, background: '#222', flexShrink: 0 }} />
 
         {/* Agent selector */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
           <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: '#3a3a3a', letterSpacing: 0.5 }}>AGENT</span>
           <select value={selectedAgentId} onChange={e => setSelectedAgentId(e.target.value)}
-            style={{ background: '#141414', border: '1px solid #1e1e1e', borderRadius: 6, color: '#ccc', fontFamily: 'var(--mono)', fontSize: 11, padding: '4px 10px', cursor: 'pointer', outline: 'none', maxWidth: 200 }}>
+            style={{ background: '#141414', border: '1px solid #222', borderRadius: 6, color: '#ccc', fontFamily: 'var(--mono)', fontSize: 11, padding: '4px 10px', cursor: 'pointer', outline: 'none', maxWidth: 200 }}>
             {agents.map(a => (
               <option key={a.id} value={a.id}>{a.agent_name} — {a.business_name}</option>
             ))}
@@ -1083,51 +1430,46 @@ function DesktopModeInner() {
 
         <div style={{ flex: 1 }} />
 
-        {/* Toolbar actions */}
+        {/* Right actions */}
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
 
-          {/* Column toggle */}
-          <div style={{ display: 'flex', gap: 0 }}>
-            {([2, 3] as const).map((c, i) => (
-              <button key={c} onClick={() => setColumns(c)} title={`${c} columns`}
-                style={{ padding: '4px 9px', background: columns === c ? '#c8f135' : '#141414', border: '1px solid #1e1e1e', borderRadius: i === 0 ? '6px 0 0 6px' : '0 6px 6px 0', color: columns === c ? '#0a0a0a' : '#555', fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, cursor: 'pointer', marginLeft: i > 0 ? -1 : 0 }}>
-                {c}
-              </button>
-            ))}
-          </div>
-
-          <button onClick={addRow}
-            style={{ padding: '4px 11px', background: '#141414', border: '1px solid #1e1e1e', borderRadius: 6, color: '#888', fontFamily: 'var(--mono)', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.12s' }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = '#c8f135'; e.currentTarget.style.color = '#c8f135' }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = '#1e1e1e'; e.currentTarget.style.color = '#888' }}>
+          <button onClick={() => setShowPicker(true)}
+            style={{ padding: '5px 12px', background: '#c8f135', border: 'none', borderRadius: 6, color: '#0a0a0a', fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
             <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
               <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
             </svg>
-            Add row
+            Add Panel
+          </button>
+
+          <button onClick={saveLayout}
+            style={{ padding: '5px 11px', background: '#141414', border: '1px solid #222', borderRadius: 6, color: '#888', fontFamily: 'var(--mono)', fontSize: 11, cursor: 'pointer', transition: 'all 0.12s' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#c8f135'; e.currentTarget.style.color = '#c8f135' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#222'; e.currentTarget.style.color = '#888' }}>
+            Save Layout
           </button>
 
           <button onClick={resetLayout}
-            style={{ padding: '4px 11px', background: '#141414', border: '1px solid #1e1e1e', borderRadius: 6, color: '#888', fontFamily: 'var(--mono)', fontSize: 11, cursor: 'pointer', transition: 'all 0.12s' }}
+            style={{ padding: '5px 11px', background: '#141414', border: '1px solid #222', borderRadius: 6, color: '#888', fontFamily: 'var(--mono)', fontSize: 11, cursor: 'pointer', transition: 'all 0.12s' }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = '#555'; e.currentTarget.style.color = '#ccc' }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = '#1e1e1e'; e.currentTarget.style.color = '#888' }}>
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#222'; e.currentTarget.style.color = '#888' }}>
             Reset
           </button>
 
-          <div style={{ width: 1, height: 18, background: '#1e1e1e' }} />
+          <div style={{ width: 1, height: 18, background: '#222' }} />
 
           {/* Clock */}
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: '#3a3a3a', letterSpacing: 0.3 }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: '#3a3a3a', letterSpacing: 0.3, flexShrink: 0 }}>
             {time.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
             {' '}
-            <span style={{ color: '#777' }}>{time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+            <span style={{ color: '#666' }}>{time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
           </div>
 
-          <div style={{ width: 1, height: 18, background: '#1e1e1e' }} />
+          <div style={{ width: 1, height: 18, background: '#222' }} />
 
           <button onClick={exit}
-            style={{ padding: '4px 11px', background: 'transparent', border: '1px solid #1e1e1e', borderRadius: 6, color: '#555', fontFamily: 'var(--mono)', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.12s' }}
+            style={{ padding: '5px 11px', background: 'transparent', border: '1px solid #222', borderRadius: 6, color: '#555', fontFamily: 'var(--mono)', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.12s' }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = '#ef4444'; e.currentTarget.style.color = '#ef4444' }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = '#1e1e1e'; e.currentTarget.style.color = '#555' }}>
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#222'; e.currentTarget.style.color = '#555' }}>
             <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
             </svg>
@@ -1136,21 +1478,46 @@ function DesktopModeInner() {
         </div>
       </div>
 
-      {/* ── Panel grid ── */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: 10, display: 'grid', gridTemplateColumns: `repeat(${columns}, 1fr)`, gridAutoRows: `minmax(220px, ${rowHeight})`, gap: 10, alignContent: 'start' }}>
-        {slots.map(slot => (
-          <div key={slot.id} style={{ minHeight: 220 }}>
-            {slot.type
-              ? <PanelWrapper type={slot.type} agentId={selectedAgentId} onClose={() => removePanel(slot.id)} />
-              : <EmptySlot onAdd={() => setPickerSlotId(slot.id)} />
-            }
-          </div>
+      {/* ── Canvas ── */}
+      <div style={{
+        flex: 1,
+        position: 'relative',
+        overflow: 'hidden',
+        background: '#080808',
+        backgroundImage: 'radial-gradient(circle, #1c1c1c 1px, transparent 1px)',
+        backgroundSize: '24px 24px',
+      }}>
+        {panels.map(panel => (
+          <FloatingPanel
+            key={panel.id}
+            panel={panel}
+            agentId={selectedAgentId}
+            isDragging={draggingId === panel.id}
+            onMouseDownPanel={() => bringToFront(panel.id)}
+            onMouseDownHeader={e => { bringToFront(panel.id); startDrag(e, panel) }}
+            onMouseDownHandle={(e, handle) => { bringToFront(panel.id); startResize(e, panel, handle) }}
+            onClose={() => closePanel(panel.id)}
+            onRefresh={() => refreshPanel(panel.id)}
+            onToggleMinimize={() => toggleMinimize(panel.id)}
+            onToggleMaximize={() => toggleMaximize(panel.id)}
+            panelRef={el => {
+              if (el) panelRefs.current.set(panel.id, el)
+              else panelRefs.current.delete(panel.id)
+            }}
+          />
         ))}
+
+        {panels.length === 0 && (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, pointerEvents: 'none' }}>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: '#2a2a2a' }}>No panels open</div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: '#222' }}>Click &ldquo;Add Panel&rdquo; to get started</div>
+          </div>
+        )}
       </div>
 
-      {/* ── Panel picker modal ── */}
-      {pickerSlotId && (
-        <PanelPicker onSelect={type => setPanel(pickerSlotId, type)} onClose={() => setPickerSlotId(null)} />
+      {/* ── Panel picker ── */}
+      {showPicker && (
+        <PanelPicker onSelect={addPanel} onClose={() => setShowPicker(false)} />
       )}
     </div>
   )
@@ -1161,7 +1528,7 @@ function DesktopModeInner() {
 export default function DesktopModePage() {
   return (
     <Suspense fallback={
-      <div style={{ background: '#0a0a0a', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ background: '#080808', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: '#444' }}>Loading…</span>
       </div>
     }>
