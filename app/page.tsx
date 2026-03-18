@@ -2,9 +2,18 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import Navbar from '../components/Navbar'
+import { supabase } from '@/lib/supabase'
+import { useRouter } from 'next/navigation'
 
 export default function Home() {
-  useEffect(() => { document.title = 'AgentBoard — AI Business Assistant' }, [])
+  const router = useRouter()
+
+  useEffect(() => {
+    document.title = 'AgentBoard — AI Business Assistant'
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) router.push('/dashboard')
+    })
+  }, [])
   return (
     <>
       <Navbar />
