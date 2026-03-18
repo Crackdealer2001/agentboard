@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -914,13 +914,17 @@ function PanelContent({ type, agentId }: { type: PanelType; agentId: string }) {
   }
 }
 
-// ─── Main page ────────────────────────────────────────────────────────────────
+// ─── Main page (inner — needs useSearchParams) ────────────────────────────────
 
-export default function DesktopModePage() {
+function DesktopModeInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const urlAgentId = searchParams.get('agentId')
+
   const [agents, setAgents] = useState<Agent[]>([])
   const [selectedAgentId, setSelectedAgentId] = useState('')
   const [pageLoading, setPageLoading] = useState(true)
+  const [pageError, setPageError] = useState<string | null>(null)
   const [time, setTime] = useState(new Date())
   const [slots, setSlots] = useState<PanelSlot[]>(() => mkSlots(4))
   const [columns, setColumns] = useState<2 | 3>(2)
@@ -943,33 +947,45 @@ export default function DesktopModePage() {
   useEffect(() => {
     document.title = 'Desktop Mode | AgentBoard'
     const init = async () => {
+      // Require agentId in URL
+      if (!urlAgentId) {
+        router.replace('/dashboard')
+        return
+      }
+
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/auth'); return }
-      const { data } = await supabase.from('business_agents').select('id, agent_name, business_name, portal_color, greeting, system_prompt')
+
+      const { data } = await supabase.from('business_agents')
+        .select('id, agent_name, business_name, portal_color, greeting, system_prompt')
         .eq('user_id', user.id).order('created_at', { ascending: false })
       const list = (data || []) as Agent[]
       setAgents(list)
+
+      // Verify the requested agent belongs to this user
+      const requestedAgent = list.find(a => a.id === urlAgentId)
+      if (!requestedAgent) {
+        setPageError(`Agent not found or you don't have access to it.`)
+        setPageLoading(false)
+        return
+      }
+
+      // Always default to the URL agent, then restore saved layout
+      setSelectedAgentId(urlAgentId)
       try {
         const saved = localStorage.getItem(STORAGE_KEY)
         if (saved) {
           const parsed = JSON.parse(saved)
           if (Array.isArray(parsed.slots) && parsed.slots.length > 0) setSlots(parsed.slots)
           if (parsed.columns === 2 || parsed.columns === 3) setColumns(parsed.columns)
-          if (parsed.agentId && list.some(a => a.id === parsed.agentId)) {
-            setSelectedAgentId(parsed.agentId)
-          } else if (list.length > 0) {
-            setSelectedAgentId(list[0].id)
-          }
-        } else if (list.length > 0) {
-          setSelectedAgentId(list[0].id)
+          // URL agent always wins over saved agent
         }
-      } catch {
-        if (list.length > 0) setSelectedAgentId(list[0].id)
-      }
+      } catch { /* ignore */ }
+
       setPageLoading(false)
     }
     init()
-  }, [router])
+  }, [router, urlAgentId])
 
   // Persist layout
   useEffect(() => {
@@ -995,12 +1011,15 @@ export default function DesktopModePage() {
     </div>
   )
 
-  if (agents.length === 0) return (
+  if (pageError) return (
     <div style={{ background: '#0a0a0a', height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
-      <div style={{ fontFamily: 'var(--serif)', fontSize: 26, fontWeight: 400, color: '#eee' }}>No agents yet</div>
-      <p style={{ color: '#444', fontSize: 14, margin: 0 }}>Build your first AI agent to use Desktop Mode.</p>
-      <button onClick={() => router.push('/builder')} style={{ padding: '10px 24px', background: '#c8f135', color: '#0a0a0a', border: 'none', borderRadius: 8, fontFamily: 'var(--mono)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-        Build an agent →
+      <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444' }}>
+        <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      </div>
+      <div style={{ fontSize: 18, fontWeight: 600, color: '#eee' }}>Could not load agent</div>
+      <p style={{ color: '#555', fontSize: 14, margin: 0, textAlign: 'center', maxWidth: 320 }}>{pageError}</p>
+      <button onClick={exit} style={{ padding: '9px 22px', background: '#1a1a1a', color: '#ccc', border: '1px solid #2a2a2a', borderRadius: 8, fontFamily: 'var(--mono)', fontSize: 12, cursor: 'pointer' }}>
+        ← Go back
       </button>
     </div>
   )
@@ -1117,5 +1136,19 @@ export default function DesktopModePage() {
         <PanelPicker onSelect={type => setPanel(pickerSlotId, type)} onClose={() => setPickerSlotId(null)} />
       )}
     </div>
+  )
+}
+
+// ─── Exported page (Suspense wrapper required for useSearchParams) ─────────────
+
+export default function DesktopModePage() {
+  return (
+    <Suspense fallback={
+      <div style={{ background: '#0a0a0a', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: '#444' }}>Loading…</span>
+      </div>
+    }>
+      <DesktopModeInner />
+    </Suspense>
   )
 }
