@@ -1,0 +1,30 @@
+// Simple script to generate a placeholder icon using the canvas API
+// Run with: node electron/generate-icon.js
+// Requires: npm install canvas (optional - only for icon generation)
+
+const fs = require('fs')
+const path = require('path')
+
+// Create a minimal valid 512x512 PNG using raw bytes
+// This is a simple green square placeholder - replace with real icon before release
+// Using a pre-encoded minimal PNG (1x1 pixel scaled) as base64
+
+// SVG source for the icon
+const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="80" fill="#0a0a0a"/>
+  <rect x="56" y="56" width="400" height="400" rx="60" fill="#111111" stroke="#222222" stroke-width="2"/>
+  <rect x="128" y="160" width="256" height="32" rx="6" fill="#c8f135"/>
+  <rect x="128" y="216" width="180" height="20" rx="5" fill="#333333"/>
+  <rect x="128" y="252" width="220" height="20" rx="5" fill="#333333"/>
+  <rect x="128" y="288" width="160" height="20" rx="5" fill="#333333"/>
+  <circle cx="340" cy="340" r="60" fill="#c8f135"/>
+  <path d="M316 340 l16 16 l32-32" stroke="#0a0a0a" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>`
+
+const iconsDir = path.join(__dirname, '../public/icons')
+if (!fs.existsSync(iconsDir)) fs.mkdirSync(iconsDir, { recursive: true })
+
+fs.writeFileSync(path.join(iconsDir, 'icon.svg'), svgIcon)
+console.log('SVG icon written to public/icons/icon.svg')
+console.log('To generate PNG icons, use a tool like: npx svgexport public/icons/icon.svg public/icons/icon.png 512:512')
+console.log('Or use https://cloudconvert.com/svg-to-png')

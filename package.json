@@ -1,12 +1,20 @@
 {
   "name": "agentboard",
-  "version": "0.1.0",
+  "version": "1.0.0",
+  "description": "AI-powered business automation platform",
+  "author": "AgentBoard",
   "private": true,
+  "main": "electron/main.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "electron:dev": "concurrently --kill-other-on-fail --names \"NEXT,ELECTRON\" --prefix-colors \"cyan,yellow\" \"next dev\" \"wait-on http://localhost:3000 && cross-env ELECTRON_DEV=1 NODE_ENV=development electron .\"",
+    "electron:build": "next build && electron-builder --win --mac",
+    "electron:build:win": "next build && electron-builder --win",
+    "electron:build:mac": "next build && electron-builder --mac",
+    "electron:pack": "electron-builder --dir"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.3.2",
@@ -24,9 +32,77 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "^41.0.3",
+    "electron-builder": "^26.8.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wait-on": "^9.0.4"
+  },
+  "build": {
+    "appId": "com.agentboard.app",
+    "productName": "AgentBoard",
+    "copyright": "Copyright © 2025 AgentBoard",
+    "directories": {
+      "output": "dist-electron",
+      "buildResources": "public"
+    },
+    "files": [
+      "electron/**/*",
+      ".next/**/*",
+      "public/**/*",
+      "node_modules/**/*",
+      "package.json",
+      "next.config.ts"
+    ],
+    "extraMetadata": {
+      "main": "electron/main.js"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "public/icons/icon.png",
+      "publisherName": "AgentBoard"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "AgentBoard"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "icon": "public/icons/icon.png",
+      "category": "public.app-category.business",
+      "darkMode": true
+    },
+    "dmg": {
+      "title": "AgentBoard",
+      "background": null,
+      "icon": "public/icons/icon.png",
+      "iconSize": 80,
+      "contents": [
+        { "x": 130, "y": 220 },
+        { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
+      ]
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "public/icons/icon.png",
+      "category": "Office"
+    }
   }
 }
