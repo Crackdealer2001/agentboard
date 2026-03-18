@@ -15,7 +15,11 @@
       "Bash(npx svgexport:*)",
       "Bash(npm run:*)",
       "Bash(ls -lh /c/Users/mavin/agentboard/dist-electron/*.exe)",
-      "Bash(ls -lh /c/Users/mavin/agentboard/dist-electron/*.blockmap)"
+      "Bash(ls -lh /c/Users/mavin/agentboard/dist-electron/*.blockmap)",
+      "Bash(taskkill /F /IM \"AgentBoard.exe\")",
+      "Bash(taskkill /F /IM \"agentboard.exe\")",
+      "Bash(taskkill /F /IM AgentBoard.exe)",
+      "Bash(cmd /c \"taskkill /F /IM AgentBoard.exe\")"
     ]
   }
 }

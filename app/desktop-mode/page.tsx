@@ -895,6 +895,8 @@ interface FloatingPanelProps {
   panel: PanelInstance
   agentId: string
   isDragging: boolean
+  isFlashing: boolean
+  isLive: boolean
   onMouseDownPanel: (e: React.MouseEvent) => void
   onMouseDownHeader: (e: React.MouseEvent) => void
   onMouseDownHandle: (e: React.MouseEvent, handle: ResizeHandle) => void
@@ -906,7 +908,7 @@ interface FloatingPanelProps {
 }
 
 function FloatingPanel({
-  panel, agentId, isDragging,
+  panel, agentId, isDragging, isFlashing, isLive,
   onMouseDownPanel, onMouseDownHeader, onMouseDownHandle,
   onClose, onRefresh, onToggleMinimize, onToggleMaximize, panelRef,
 }: FloatingPanelProps) {
@@ -935,13 +937,15 @@ function FloatingPanel({
         height: panel.isMinimized ? HEADER_H : panel.height,
         zIndex: panel.zIndex,
         background: '#111111',
-        border: `1px solid ${isDragging ? 'rgba(200,241,53,0.3)' : '#222222'}`,
+        border: `1px solid ${isFlashing ? 'rgba(200,241,53,0.7)' : isDragging ? 'rgba(200,241,53,0.3)' : '#222222'}`,
         borderRadius: 10,
         display: 'flex',
         flexDirection: 'column',
-        boxShadow: isDragging ? '0 16px 48px rgba(0,0,0,0.6)' : '0 8px 32px rgba(0,0,0,0.4)',
+        boxShadow: isFlashing
+          ? '0 0 0 1px rgba(200,241,53,0.2), 0 8px 32px rgba(0,0,0,0.4)'
+          : isDragging ? '0 16px 48px rgba(0,0,0,0.6)' : '0 8px 32px rgba(0,0,0,0.4)',
         overflow: 'hidden',
-        transition: isDragging ? 'none' : 'box-shadow 0.15s, border-color 0.15s',
+        transition: isDragging ? 'none' : 'box-shadow 0.3s, border-color 0.3s',
       }
 
   return (
@@ -965,6 +969,9 @@ function FloatingPanel({
           borderRadius: panel.isMinimized ? 10 : '10px 10px 0 0',
         }}>
         <span style={{ color: '#555', display: 'flex', flexShrink: 0 }}>{def.icon}</span>
+        {isLive && (
+          <div title="Live updates active" style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', flexShrink: 0, boxShadow: '0 0 5px #22c55e' }} />
+        )}
         <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, color: '#ededed', letterSpacing: 0.8, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {def.label}
         </span>
@@ -1072,6 +1079,8 @@ function DesktopModeInner() {
   const [panels, setPanels] = useState<PanelInstance[]>([])
   const [showPicker, setShowPicker] = useState(false)
   const [draggingId, setDraggingId] = useState<string | null>(null)
+  const [liveTypes, setLiveTypes] = useState<Set<PanelType>>(new Set())
+  const [flashingIds, setFlashingIds] = useState<Set<string>>(new Set())
 
   // Drag/resize state — never triggers re-renders
   const dragRef = useRef<{
@@ -1092,6 +1101,13 @@ function DesktopModeInner() {
   } | null>(null)
 
   const panelRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+  // Mirror of panels state readable synchronously in callbacks
+  const panelsSnapshot = useRef<PanelInstance[]>([])
+  // Active Supabase realtime channels — cleaned up on agent switch / unmount
+  const subsRef = useRef<ReturnType<typeof supabase.channel>[]>([])
+
+  // Keep panelsSnapshot in sync with panels state
+  useEffect(() => { panelsSnapshot.current = panels }, [panels])
 
   // ── Electron guard ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -1257,6 +1273,92 @@ function DesktopModeInner() {
       window.removeEventListener('mouseup', onMouseUp)
     }
   }, [])
+
+  // ── Real-time: refresh helper ───────────────────────────────────────────────
+
+  const refreshByType = useCallback((types: PanelType[]) => {
+    const targets = panelsSnapshot.current.filter(p => types.includes(p.type))
+    if (targets.length === 0) return
+    const ids = targets.map(p => p.id)
+
+    // Bump refreshKey for each matching panel
+    setPanels(prev => prev.map(p => ids.includes(p.id) ? { ...p, refreshKey: p.refreshKey + 1 } : p))
+
+    // Flash border for 600ms
+    setFlashingIds(prev => { const n = new Set(prev); ids.forEach(id => n.add(id)); return n })
+    setTimeout(() => {
+      setFlashingIds(prev => { const n = new Set(prev); ids.forEach(id => n.delete(id)); return n })
+    }, 600)
+  }, [])
+
+  // ── Real-time: subscriptions (re-created when selectedAgentId changes) ───────
+
+  useEffect(() => {
+    if (!selectedAgentId || pageLoading) return
+
+    // Tear down any previous channels
+    for (const ch of subsRef.current) {
+      supabase.removeChannel(ch).catch(() => {/* ignore */})
+    }
+    subsRef.current = []
+    setLiveTypes(new Set())
+
+    // Table → panel-type mapping
+    const TABLE_MAP: Array<{ table: string; fk: string; types: PanelType[] }> = [
+      { table: 'calendar_events',      fk: 'business_agent_id', types: ['calendar'] },
+      { table: 'orders',               fk: 'business_agent_id', types: ['orders'] },
+      { table: 'quotes',               fk: 'business_agent_id', types: ['quotes'] },
+      { table: 'knowledge_base',       fk: 'business_agent_id', types: ['knowledge'] },
+      { table: 'contacts',             fk: 'business_agent_id', types: ['contacts'] },
+      { table: 'agent_memory',         fk: 'business_agent_id', types: ['memory'] },
+      { table: 'team_members',         fk: 'business_agent_id', types: ['team'] },
+      { table: 'documents',            fk: 'agent_id',          types: ['documents'] },
+      { table: 'portal_conversations', fk: 'business_agent_id', types: ['conversations'] },
+      { table: 'automations',          fk: 'business_agent_id', types: ['automations'] },
+      { table: 'automation_runs',      fk: 'business_agent_id', types: ['dashboard', 'analytics'] },
+    ]
+
+    for (const { table, fk, types } of TABLE_MAP) {
+      const channelName = `dm-${table}-${selectedAgentId}`
+      try {
+        const ch = supabase
+          .channel(channelName)
+          .on(
+            'postgres_changes' as Parameters<ReturnType<typeof supabase.channel>['on']>[0],
+            { event: '*', schema: 'public', table, filter: `${fk}=eq.${selectedAgentId}` },
+            () => { refreshByType(types) },
+          )
+          .subscribe((status: string) => {
+            if (status === 'SUBSCRIBED') {
+              setLiveTypes(prev => { const n = new Set(prev); types.forEach(t => n.add(t)); return n })
+            } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+              console.error(`[DesktopMode] Realtime subscription failed for ${table}:`, status)
+            }
+          })
+        subsRef.current.push(ch)
+      } catch (err) {
+        console.error(`[DesktopMode] Failed to create channel for ${table}:`, err)
+      }
+    }
+
+    return () => {
+      for (const ch of subsRef.current) {
+        supabase.removeChannel(ch).catch(() => {/* ignore */})
+      }
+      subsRef.current = []
+      setLiveTypes(new Set())
+    }
+  }, [selectedAgentId, pageLoading, refreshByType])
+
+  // ── Real-time: 30-second polling fallback ───────────────────────────────────
+
+  useEffect(() => {
+    if (!selectedAgentId || pageLoading) return
+    const id = setInterval(() => {
+      setPanels(prev => prev.map(p => ({ ...p, refreshKey: p.refreshKey + 1 })))
+    }, 30000)
+    return () => clearInterval(id)
+  }, [selectedAgentId, pageLoading])
 
   // ── Panel actions ───────────────────────────────────────────────────────────
 
@@ -1493,6 +1595,8 @@ function DesktopModeInner() {
             panel={panel}
             agentId={selectedAgentId}
             isDragging={draggingId === panel.id}
+            isFlashing={flashingIds.has(panel.id)}
+            isLive={liveTypes.has(panel.type)}
             onMouseDownPanel={() => bringToFront(panel.id)}
             onMouseDownHeader={e => { bringToFront(panel.id); startDrag(e, panel) }}
             onMouseDownHandle={(e, handle) => { bringToFront(panel.id); startResize(e, panel, handle) }}
