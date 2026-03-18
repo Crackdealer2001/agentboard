@@ -19,7 +19,8 @@
       "Bash(taskkill /F /IM \"AgentBoard.exe\")",
       "Bash(taskkill /F /IM \"agentboard.exe\")",
       "Bash(taskkill /F /IM AgentBoard.exe)",
-      "Bash(cmd /c \"taskkill /F /IM AgentBoard.exe\")"
+      "Bash(cmd /c \"taskkill /F /IM AgentBoard.exe\")",
+      "Bash(grep -n \"setInterval\\\\|router.refresh\\\\|window.location.reload\\\\|useEffect\\\\|agentId\" C:/Users/mavin/agentboard/app/agent/[id]/AgentClient.tsx)"
     ]
   }
 }

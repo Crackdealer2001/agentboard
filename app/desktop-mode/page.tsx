@@ -1034,7 +1034,12 @@ function FloatingPanel({
       {!panel.isMinimized && (
         <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
-            <PanelContent key={`${panel.type}-${agentId}-${panel.refreshKey}`} type={panel.type} agentId={agentId} />
+            {/* Chat key never includes refreshKey — messages must survive all subscription/refresh events */}
+            <PanelContent
+              key={panel.type === 'chat' ? `chat-${agentId}` : `${panel.type}-${agentId}-${panel.refreshKey}`}
+              type={panel.type}
+              agentId={agentId}
+            />
           </div>
         </div>
       )}
@@ -1350,15 +1355,7 @@ function DesktopModeInner() {
     }
   }, [selectedAgentId, pageLoading, refreshByType])
 
-  // ── Real-time: 30-second polling fallback ───────────────────────────────────
-
-  useEffect(() => {
-    if (!selectedAgentId || pageLoading) return
-    const id = setInterval(() => {
-      setPanels(prev => prev.map(p => ({ ...p, refreshKey: p.refreshKey + 1 })))
-    }, 30000)
-    return () => clearInterval(id)
-  }, [selectedAgentId, pageLoading])
+  // (no polling fallback — subscriptions handle live updates; chat messages must never be auto-wiped)
 
   // ── Panel actions ───────────────────────────────────────────────────────────
 
