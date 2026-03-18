@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import Sidebar from '@/components/Sidebar'
 import { useRouter } from 'next/navigation'
@@ -20,11 +20,21 @@ export default function OrdersClient({ agent, orders }: {
   const router = useRouter()
   const [allOrders, setAllOrders] = useState(orders)
   const [filter, setFilter] = useState('ALL')
+  const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<Record<string, unknown> | null>(null)
   const [updating, setUpdating] = useState(false)
 
+  useEffect(() => {
+    document.title = `Orders — ${agent.business_name as string} | AgentBoard`
+  }, [])
+
   const statuses = ['ALL', 'pending', 'confirmed', 'in_progress', 'completed', 'cancelled']
-  const filtered = filter === 'ALL' ? allOrders : allOrders.filter(o => o.status === filter)
+  const searchLower = search.toLowerCase()
+  const filtered = allOrders
+    .filter(o => filter === 'ALL' || o.status === filter)
+    .filter(o => !search || [
+      o.client_name, o.client_email, o.status, o.notes, o.order_number
+    ].some(v => typeof v === 'string' && v.toLowerCase().includes(searchLower)))
 
   const totalRevenue = allOrders
     .filter(o => o.status === 'completed')
@@ -215,6 +225,21 @@ export default function OrdersClient({ agent, orders }: {
             ))}
           </div>
 
+          {/* Search */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ position: 'relative', maxWidth: 360 }}>
+              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--fg3)', pointerEvents: 'none' }}><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search orders by name, email, status..."
+                style={{ width: '100%', paddingLeft: 36, paddingRight: 12, paddingTop: 9, paddingBottom: 9, border: '1px solid var(--border2)', borderRadius: 8, fontFamily: 'var(--sidebar-font)', fontSize: 13, background: 'var(--bg2)', color: 'var(--fg)', outline: 'none' }}
+              />
+            </div>
+            {search && <div style={{ fontFamily: 'var(--sidebar-font)', fontSize: 12, color: 'var(--fg3)', marginTop: 8 }}>{filtered.length} order{filtered.length !== 1 ? 's' : ''} found</div>}
+          </div>
+
           {/* Filter tabs */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
             {statuses.map(s => (
@@ -244,13 +269,13 @@ export default function OrdersClient({ agent, orders }: {
                 </div>
                 <div className="empty-state-title" style={{ fontFamily: 'var(--sidebar-font)' }}>No orders yet</div>
                 <div className="empty-state-desc" style={{ fontFamily: 'var(--sidebar-font)' }}>
-                  Ask your agent to create an order record and it will appear here.
+                  {filter === 'ALL' ? 'Have your agent create an order — try asking: "Create an order for John Smith for 2x Service A at $150 each"' : `No ${filter.replace('_', ' ')} orders found.`}
                 </div>
                 <button
                   onClick={() => router.push(`/agent/${agent.id as string}`)}
                   className="btn btn-accent"
                   style={{ fontFamily: 'var(--sidebar-font)', fontWeight: 600 }}>
-                  Go to agent →
+                  Have agent create an order →
                 </button>
               </div>
             </div>

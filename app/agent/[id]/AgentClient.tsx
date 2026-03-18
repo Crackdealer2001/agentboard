@@ -59,10 +59,14 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([])
   const [calendarDate, setCalendarDate] = useState(new Date())
   const [portalCopied, setPortalCopied] = useState(false)
+  const [healthData, setHealthData] = useState<{ kb: number; contacts: number; hasPortalColor: boolean; hasTagline: boolean; automations: number; events: number } | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  useEffect(() => { loadRecentRuns(); loadCalendarEvents() }, [])
+  useEffect(() => {
+    document.title = `${agent.agent_name as string} — ${agent.business_name as string} | AgentBoard`
+  }, [])
+  useEffect(() => { loadRecentRuns(); loadCalendarEvents(); loadHealthData() }, [])
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
   const loadRecentRuns = async () => {
@@ -73,6 +77,23 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
   const loadCalendarEvents = async () => {
     const { data } = await supabase.from('calendar_events').select('*').eq('business_agent_id', agent.id as string).order('event_date', { ascending: true })
     setCalendarEvents(data || [])
+  }
+
+  const loadHealthData = async () => {
+    const [kbRes, contactsRes, runsRes, eventsRes] = await Promise.all([
+      supabase.from('knowledge_base').select('id', { count: 'exact', head: true }).eq('business_agent_id', agent.id as string),
+      supabase.from('contacts').select('id', { count: 'exact', head: true }).eq('business_agent_id', agent.id as string),
+      supabase.from('automation_runs').select('id', { count: 'exact', head: true }).eq('business_agent_id', agent.id as string),
+      supabase.from('calendar_events').select('id', { count: 'exact', head: true }).eq('business_agent_id', agent.id as string),
+    ])
+    setHealthData({
+      kb: kbRes.count || 0,
+      contacts: contactsRes.count || 0,
+      automations: runsRes.count || 0,
+      events: eventsRes.count || 0,
+      hasPortalColor: !!(agent.portal_color && agent.portal_color !== '#c8f135'),
+      hasTagline: !!(agent.portal_tagline && (agent.portal_tagline as string).trim()),
+    })
   }
 
   const startAction = (action: typeof QUICK_ACTIONS[0]) => {
@@ -236,6 +257,49 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
                   </button>
                 </div>
               </div>
+
+              {/* Health Score */}
+              {healthData !== null && (() => {
+                const criteria = [
+                  { label: 'Knowledge base added', pass: healthData.kb > 0, href: `/agent/${agent.id as string}/manage` },
+                  { label: 'Contacts imported', pass: healthData.contacts > 0, href: `/agent/${agent.id as string}/manage` },
+                  { label: 'Portal customized', pass: healthData.hasPortalColor && healthData.hasTagline, href: `/agent/${agent.id as string}/manage` },
+                  { label: 'Automation tasks run', pass: healthData.automations > 0, href: `/agent/${agent.id as string}` },
+                  { label: 'Calendar events scheduled', pass: healthData.events > 0, href: `/agent/${agent.id as string}` },
+                ]
+                const score = criteria.filter(c => c.pass).length * 20
+                return (
+                  <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: '24px 28px', marginBottom: 28 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16, marginBottom: 18 }}>
+                      <div>
+                        <div style={{ fontFamily: 'var(--sidebar-font)', fontSize: 12, color: 'var(--fg3)', fontWeight: 500, marginBottom: 4 }}>Agent Health Score</div>
+                        <div style={{ fontSize: 36, fontWeight: 700, color: score >= 80 ? 'var(--accent)' : score >= 60 ? 'var(--blue)' : 'var(--fg3)', fontFamily: 'var(--sidebar-font)', lineHeight: 1 }}>{score}<span style={{ fontSize: 16, color: 'var(--fg3)', fontWeight: 400 }}>/100</span></div>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1, maxWidth: 340 }}>
+                        {criteria.map(c => (
+                          <div key={c.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{ width: 18, height: 18, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: c.pass ? 'rgba(74,222,128,0.12)' : 'var(--bg3)', border: `1px solid ${c.pass ? 'rgba(74,222,128,0.3)' : 'var(--border2)'}` }}>
+                              {c.pass ? (
+                                <svg width="10" height="10" fill="none" stroke="#4ade80" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></svg>
+                              ) : (
+                                <svg width="10" height="10" fill="none" stroke="var(--fg3)" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                              )}
+                            </div>
+                            {c.pass ? (
+                              <span style={{ fontSize: 13, fontFamily: 'var(--sidebar-font)', color: 'var(--fg2)' }}>{c.label}</span>
+                            ) : (
+                              <button onClick={() => router.push(c.href)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 13, fontFamily: 'var(--sidebar-font)', color: 'var(--fg3)', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: 2 }}>{c.label}</button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ width: '100%', height: 6, background: 'var(--bg3)', borderRadius: 3, overflow: 'hidden', border: '1px solid var(--border2)' }}>
+                      <div style={{ height: '100%', width: `${score}%`, background: score >= 80 ? 'var(--accent)' : score >= 60 ? 'var(--blue)' : 'var(--fg3)', borderRadius: 3, transition: 'width 0.6s ease' }} />
+                    </div>
+                  </div>
+                )
+              })()}
 
               {/* Stats */}
               <div className="agent-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 40 }}>
@@ -444,8 +508,9 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
                   <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 16, fontFamily: 'var(--sidebar-font)' }}>Upcoming</div>
                   {upcomingEvents.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '24px 0' }}>
-                      <p style={{ fontFamily: 'var(--sidebar-font)', fontSize: 13, color: 'var(--fg3)', marginBottom: 12 }}>No upcoming events</p>
-                      <button onClick={() => setView('chat')} className="btn btn-outline btn-sm" style={{ fontFamily: 'var(--sidebar-font)', fontSize: 12 }}>+ Add via chat</button>
+                      <p style={{ fontFamily: 'var(--sidebar-font)', fontSize: 13, color: 'var(--fg3)', marginBottom: 6 }}>No upcoming events</p>
+                      <p style={{ fontFamily: 'var(--sidebar-font)', fontSize: 12, color: 'var(--fg3)', marginBottom: 12, fontStyle: 'italic' }}>Try: "Schedule a meeting with John on Friday at 3pm"</p>
+                      <button onClick={() => setView('chat')} className="btn btn-outline btn-sm" style={{ fontFamily: 'var(--sidebar-font)', fontSize: 12 }}>Ask agent to schedule →</button>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

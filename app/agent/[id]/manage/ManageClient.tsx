@@ -52,6 +52,10 @@ export default function ManageClient({
   const inputStyle = { width: '100%', padding: '10px 14px', border: '1px solid var(--border2)', borderRadius: 8, fontFamily: 'var(--sidebar-font)', fontSize: 13, background: 'var(--bg3)', color: 'var(--fg)', outline: 'none' }
 
   useEffect(() => {
+    document.title = `Manage — ${agent.business_name as string} | AgentBoard`
+  }, [])
+
+  useEffect(() => {
     if (activeTab === 'conversations') loadConversations()
   }, [activeTab])
 
@@ -243,6 +247,56 @@ export default function ManageClient({
     '#1e3a5f', '#7c3aed', '#dc2626', '#059669',
   ]
 
+  const [contactSearch, setContactSearch] = useState('')
+
+  const KB_TEMPLATES = [
+    {
+      label: 'Business Hours',
+      icon: (
+        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
+      ),
+      title: 'Business Hours',
+      type: 'general',
+      content: 'Our business hours are:\nMonday–Friday: 9:00 AM – 5:00 PM\nSaturday: 10:00 AM – 2:00 PM\nSunday: Closed\n\nWe are available by appointment outside these hours.',
+    },
+    {
+      label: 'Consultation Fee',
+      icon: (
+        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
+      ),
+      title: 'Consultation & Pricing',
+      type: 'pricing',
+      content: 'Initial consultation: $150 for 60 minutes\nFollow-up sessions: $100 for 45 minutes\nEmergency/same-day appointments: $200\n\nAll prices include GST. Payment due at time of service.',
+    },
+    {
+      label: 'Services Offered',
+      icon: (
+        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M9 12h6M9 16h6M9 8h6M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" /></svg>
+      ),
+      title: 'Our Services',
+      type: 'service',
+      content: 'We offer the following services:\n1. [Service 1] — Description and price\n2. [Service 2] — Description and price\n3. [Service 3] — Description and price\n\nAll services include a satisfaction guarantee.',
+    },
+    {
+      label: 'Location & Parking',
+      icon: (
+        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
+      ),
+      title: 'Location & How to Find Us',
+      type: 'general',
+      content: 'We are located at [Your Address, City, State, ZIP].\n\nParking: [Free parking available on site / Street parking available / Nearest car park is...]\n\nPublic transport: [Nearest bus/train stop and walking directions]',
+    },
+    {
+      label: 'FAQ',
+      icon: (
+        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01" /></svg>
+      ),
+      title: 'Frequently Asked Questions',
+      type: 'faq',
+      content: 'Q: How do I book an appointment?\nA: You can book by calling us, emailing, or using the booking form on our website.\n\nQ: What is your cancellation policy?\nA: We require 24 hours notice for cancellations. Late cancellations may incur a fee.\n\nQ: Do you offer payment plans?\nA: Yes, we offer flexible payment options. Please ask our team for details.',
+    },
+  ]
+
   return (
     <div className="app-layout">
       <Sidebar />
@@ -297,6 +351,25 @@ export default function ManageClient({
 
           {activeTab === 'knowledge' && (
             <div>
+              {/* Quick-add templates */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontFamily: 'var(--sidebar-font)', fontSize: 12, color: 'var(--fg3)', fontWeight: 600, marginBottom: 10, letterSpacing: 0.3 }}>Quick-add templates</div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {KB_TEMPLATES.map(t => (
+                    <button
+                      key={t.label}
+                      onClick={() => setNewKb({ title: t.title, content: t.content, type: t.type })}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 14px', border: '1px solid var(--border2)', borderRadius: 20, background: 'var(--bg2)', color: 'var(--fg3)', cursor: 'pointer', fontFamily: 'var(--sidebar-font)', fontSize: 12, fontWeight: 500, transition: 'all 0.12s' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--accent)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--fg)' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border2)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--fg3)' }}
+                    >
+                      <span style={{ color: 'var(--fg3)' }}>{t.icon}</span>
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: 24, marginBottom: 24 }}>
                 <div style={{ fontFamily: 'var(--sidebar-font)', fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Add knowledge</div>
                 <p style={{ fontSize: 13, color: 'var(--fg3)', marginBottom: 16, fontFamily: 'var(--sidebar-font)' }}>Add pricing, FAQs, policies, services — anything your agent should know about your business.</p>
@@ -421,9 +494,23 @@ export default function ManageClient({
                 </div>
               ) : (
                 <div>
-                  <div style={{ fontFamily: 'var(--sidebar-font)', fontSize: 12, color: 'var(--fg3)', marginBottom: 12 }}>{cts.length} contacts · your agent knows all of them</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, gap: 12, flexWrap: 'wrap' }}>
+                    <div style={{ fontFamily: 'var(--sidebar-font)', fontSize: 12, color: 'var(--fg3)' }}>
+                      {contactSearch ? `${cts.filter(c => { const q = contactSearch.toLowerCase(); return [c.name, c.email, c.company, c.phone].some(v => typeof v === 'string' && v.toLowerCase().includes(q)) }).length} of ${cts.length} contacts` : `${cts.length} contacts · your agent knows all of them`}
+                    </div>
+                    <div style={{ position: 'relative' }}>
+                      <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--fg3)', pointerEvents: 'none' }}><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
+                      <input
+                        type="text"
+                        value={contactSearch}
+                        onChange={e => setContactSearch(e.target.value)}
+                        placeholder="Search contacts..."
+                        style={{ ...inputStyle, width: 220, paddingLeft: 28, fontSize: 12 }}
+                      />
+                    </div>
+                  </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
-                    {cts.map(c => (
+                    {cts.filter(c => { if (!contactSearch) return true; const q = contactSearch.toLowerCase(); return [c.name, c.email, c.company, c.phone].some(v => typeof v === 'string' && v.toLowerCase().includes(q)) }).map(c => (
                       <div key={c.id as string} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10, padding: '16px 20px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
                           <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--bg4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--sidebar-font)', fontSize: 16, fontWeight: 700, color: 'var(--fg2)' }}>{(c.name as string)?.[0]}</div>

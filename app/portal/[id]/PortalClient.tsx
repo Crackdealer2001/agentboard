@@ -86,6 +86,10 @@ export default function PortalClient({
   )
 
   useEffect(() => {
+    document.title = `${agent.business_name as string} | Powered by AgentBoard`
+  }, [])
+
+  useEffect(() => {
     if (started) {
       const greeting = (agent.portal_greeting as string) ||
         `Hi! I'm ${agent.agent_name as string}, the AI assistant for ${agent.business_name as string}. How can I help you today?`

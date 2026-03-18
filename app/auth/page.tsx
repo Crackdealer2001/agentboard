@@ -1,11 +1,12 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 
 export default function AuthPage() {
   const router = useRouter()
+  useEffect(() => { document.title = 'Sign In | AgentBoard' }, [])
   const [mode, setMode] = useState<'signin' | 'signup' | 'reset'>('signup')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')

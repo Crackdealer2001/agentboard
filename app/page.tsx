@@ -1,8 +1,10 @@
 'use client'
+import { useEffect } from 'react'
 import Link from 'next/link'
 import Navbar from '../components/Navbar'
 
 export default function Home() {
+  useEffect(() => { document.title = 'AgentBoard — AI Business Assistant' }, [])
   return (
     <>
       <Navbar />

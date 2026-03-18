@@ -9,6 +9,7 @@ export default function DocumentPage() {
   const [documents, setDocuments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('ALL')
+  const [search, setSearch] = useState('')
   const [preview, setPreview] = useState<{ html: string; type: string } | null>(null)
 
   useEffect(() => {
@@ -34,7 +35,10 @@ export default function DocumentPage() {
   }, [])
 
   const types = ['ALL', ...Array.from(new Set(documents.map((d: any) => d.type)))]
-  const filtered = filter === 'ALL' ? documents : documents.filter((d: any) => d.type === filter)
+  const searchLower = search.toLowerCase()
+  const filtered = documents
+    .filter((d: any) => filter === 'ALL' || d.type === filter)
+    .filter((d: any) => !search || [d.type, d.metadata?.clientName, d.metadata?.title, d.metadata?.party2, d.metadata?.invoiceNumber].some((v: any) => typeof v === 'string' && v.toLowerCase().includes(searchLower)))
 
   const typeColors: Record<string, string> = {
     INVOICE: '#10b981', CONTRACT: '#3b82f6', PROPOSAL: '#8b5cf6',
@@ -97,6 +101,21 @@ export default function DocumentPage() {
         <div className="app-content">
 
           {documents.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ position: 'relative', maxWidth: 360, marginBottom: 12 }}>
+                <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--fg3)', pointerEvents: 'none' }}><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search documents..."
+                  style={{ width: '100%', paddingLeft: 32, paddingRight: 12, paddingTop: 8, paddingBottom: 8, border: '1px solid var(--border2)', borderRadius: 8, fontFamily: 'var(--mono)', fontSize: 12, background: 'var(--bg2)', color: 'var(--fg)', outline: 'none' }}
+                />
+              </div>
+            </div>
+          )}
+
+          {documents.length > 0 && (
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 20 }}>
               {types.map(type => (
                 <button key={type} onClick={() => setFilter(type)}
@@ -122,7 +141,10 @@ export default function DocumentPage() {
                   <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
                 </div>
                 <div className="empty-state-title">No documents yet</div>
-                <div className="empty-state-desc">Documents generated through your agents will appear here.</div>
+                <div className="empty-state-desc">Documents generated through your agents will appear here. Ask your agent to create an invoice, contract, or proposal.</div>
+                <button onClick={() => router.push('/dashboard')} className="btn btn-accent" style={{ marginTop: 12 }}>
+                  Go to your agents →
+                </button>
               </div>
             </div>
           ) : (

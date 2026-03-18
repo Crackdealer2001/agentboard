@@ -48,6 +48,7 @@ export default function BuilderPage() {
   })
 
   useEffect(() => {
+    document.title = 'Build Your Agent | AgentBoard'
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user)
       setAuthChecking(false)
