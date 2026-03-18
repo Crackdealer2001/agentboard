@@ -1,6 +1,11 @@
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Browse Agents | AgentBoard',
+}
 
 export default async function AgentsPage() {
   const { data: agents } = await supabase

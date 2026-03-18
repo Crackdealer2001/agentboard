@@ -60,7 +60,7 @@ Deliver the complete output now. Do not explain what you will do — just do it 
       return NextResponse.json({ error: data.error?.message }, { status: 500 })
     }
 
-    const result = data.content[0].text
+    const result = data.content?.[0]?.text || ''
 
     await supabase
       .from('task_results')

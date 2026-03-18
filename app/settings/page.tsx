@@ -33,6 +33,7 @@ export default function SettingsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   useEffect(() => {
+    document.title = 'Settings | AgentBoard'
     // Restore active tab from URL hash
     const hash = window.location.hash.replace('#', '') as Tab
     if (VALID_TABS.includes(hash)) setActiveTab(hash)

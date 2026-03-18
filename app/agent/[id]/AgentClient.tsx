@@ -362,7 +362,7 @@ export default function AgentClient({ agent }: { agent: Record<string, unknown> 
                             <div style={{ fontSize: 13, fontWeight: 500, fontFamily: 'var(--sidebar-font)' }}>{(msg.calendarEvent as Record<string, unknown>).title as string}</div>
                             <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--fg3)' }}>
                               {new Date((msg.calendarEvent as Record<string, unknown>).event_date as string + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                              {(msg.calendarEvent as Record<string, unknown>).event_time && ` · ${formatEventTime((msg.calendarEvent as Record<string, unknown>).event_time as string)}`}
+                              {!!(msg.calendarEvent as Record<string, unknown>).event_time && ` · ${formatEventTime((msg.calendarEvent as Record<string, unknown>).event_time as string)}`}
                             </div>
                           </div>
                           <button onClick={() => setView('calendar')} style={{ fontFamily: 'var(--sidebar-font)', fontSize: 11, padding: '4px 10px', background: 'rgba(59,130,246,0.2)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 6, color: '#3b82f6', cursor: 'pointer', flexShrink: 0, fontWeight: 600 }}>View →</button>

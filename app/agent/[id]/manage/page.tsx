@@ -1,5 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
 import ManageClient from './ManageClient'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Manage Agent | AgentBoard',
+}
 
 export default async function ManagePage({
   params,

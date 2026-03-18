@@ -2,6 +2,11 @@ import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import ExecuteButton from '@/components/ExecuteButton'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Task Board | AgentBoard',
+}
 
 export default async function TasksPage() {
   const { data: tasks } = await supabase

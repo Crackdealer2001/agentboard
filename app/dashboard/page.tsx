@@ -9,11 +9,13 @@ import { useRouter } from 'next/navigation'
 
 export default function DashboardPage() {
   const router = useRouter()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [businessAgents, setBusinessAgents] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [deleteModal, setDeleteModal] = useState<{ id: string; name: string } | null>(null)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [deleteLoading, setDeleteLoading] = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [user, setUser] = useState<any>(null)
 
   // Onboarding state
@@ -21,6 +23,10 @@ export default function DashboardPage() {
   const [showWelcome, setShowWelcome] = useState(false)
   const [showChecklist, setShowChecklist] = useState(false)
   const [hasKnowledge, setHasKnowledge] = useState(false)
+
+  useEffect(() => {
+    document.title = 'Dashboard | AgentBoard'
+  }, [])
 
   useEffect(() => {
     const load = async () => {

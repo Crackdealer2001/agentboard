@@ -1,5 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
 import PrintDocument from './PrintDocument'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Document | AgentBoard',
+}
 
 export default async function DocumentPage({
   params,
@@ -21,5 +26,5 @@ export default async function DocumentPage({
 
   if (!document) return <div style={{ padding: 40, color: '#fff' }}>Document not found</div>
 
-  return <PrintDocument document={document} />
+  return <PrintDocument doc={document} />
 }

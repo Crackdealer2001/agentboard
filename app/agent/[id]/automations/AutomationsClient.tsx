@@ -418,17 +418,17 @@ export default function AutomationsClient({ agent, automations, results }: {
                         <span style={{ fontFamily: 'var(--sidebar-font)', fontSize: 12, color: 'var(--accent)', fontWeight: 500 }}>
                           {formatSchedule(auto)}
                         </span>
-                        {auto.next_run && (
+                        {!!auto.next_run && (
                           <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--fg3)' }}>
                             Next: {new Date(auto.next_run as string).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                           </span>
                         )}
-                        {auto.last_run && (
+                        {!!auto.last_run && (
                           <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--fg3)' }}>
                             Last: {timeAgo(auto.last_run as string)}
                           </span>
                         )}
-                        {auto.notify_email && (
+                        {!!auto.notify_email && (
                           <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--fg3)' }}>
                             → {auto.notify_email as string}
                           </span>

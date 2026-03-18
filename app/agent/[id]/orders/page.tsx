@@ -1,5 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
 import OrdersClient from './OrdersClient'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Orders | AgentBoard',
+}
 
 export default async function OrdersPage({
   params,
@@ -10,7 +15,7 @@ export default async function OrdersPage({
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
   const [{ data: agent }, { data: orders }] = await Promise.all([

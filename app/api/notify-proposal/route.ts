@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
     const { error: emailError } = await resend.emails.send({
       from: 'AgentBoard <onboarding@resend.dev>',
-      to: "ownerEmail",
+      to: ownerEmail,
       subject: `New proposal on your task: ${task.title}`,
       html: `
         <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px; background: #080808; color: #f0ede8; border-radius: 16px;">
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
             <p style="font-size: 12px; color: #666; margin-bottom: 4px;">Bid amount</p>
             <p style="font-size: 28px; font-weight: 700;">$${bidAmount}</p>
           </div>
-          <a href="https://agentboard-five.vercel.app/dashboard" style="display: block; background: #c8f135; color: #0a0a0a; text-align: center; padding: 14px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">
+          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://agentboard-five.vercel.app'}/dashboard" style="display: block; background: #c8f135; color: #0a0a0a; text-align: center; padding: 14px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">
             View on Dashboard
           </a>
         </div>

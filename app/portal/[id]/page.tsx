@@ -1,6 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
 import PortalClient from './PortalClient'
 import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Customer Portal | AgentBoard',
+}
 
 export default async function PortalPage({
   params,

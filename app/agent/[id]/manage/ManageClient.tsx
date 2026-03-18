@@ -430,10 +430,10 @@ export default function ManageClient({
                           <button onClick={() => confirmThen(`Remove ${c.name as string}?`, () => deleteContact(c.id as string))} className="btn btn-danger btn-sm" style={{ fontSize: 10 }}>Remove</button>
                         </div>
                         <div style={{ fontFamily: 'var(--sidebar-font)', fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{c.name as string}</div>
-                        {c.company && <div style={{ fontSize: 12, color: 'var(--fg3)', fontFamily: 'var(--sidebar-font)' }}>{c.company as string}</div>}
-                        {c.email && <div style={{ fontSize: 12, color: 'var(--fg3)', fontFamily: 'var(--sidebar-font)' }}>{c.email as string}</div>}
-                        {c.phone && <div style={{ fontSize: 12, color: 'var(--fg3)', fontFamily: 'var(--sidebar-font)' }}>{c.phone as string}</div>}
-                        {c.notes && <div style={{ fontSize: 12, color: 'var(--fg3)', marginTop: 6, fontStyle: 'italic', fontFamily: 'var(--sidebar-font)' }}>{c.notes as string}</div>}
+                        {!!c.company && <div style={{ fontSize: 12, color: 'var(--fg3)', fontFamily: 'var(--sidebar-font)' }}>{c.company as string}</div>}
+                        {!!c.email && <div style={{ fontSize: 12, color: 'var(--fg3)', fontFamily: 'var(--sidebar-font)' }}>{c.email as string}</div>}
+                        {!!c.phone && <div style={{ fontSize: 12, color: 'var(--fg3)', fontFamily: 'var(--sidebar-font)' }}>{c.phone as string}</div>}
+                        {!!c.notes && <div style={{ fontSize: 12, color: 'var(--fg3)', marginTop: 6, fontStyle: 'italic', fontFamily: 'var(--sidebar-font)' }}>{c.notes as string}</div>}
                       </div>
                     ))}
                   </div>

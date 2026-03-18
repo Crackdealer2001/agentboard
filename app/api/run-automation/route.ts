@@ -36,10 +36,10 @@ export async function POST(req: NextRequest) {
       supabase.from('calendar_events').select('*').eq('business_agent_id', agent.id).gte('event_date', today.toISOString().split('T')[0]).limit(5),
     ])
 
-    const memoryContext = memories?.length ? `MEMORY:\n${memories.map((m: any) => `- ${m.key}: ${m.value}`).join('\n')}` : ''
-    const knowledgeContext = knowledge?.length ? `KNOWLEDGE:\n${knowledge.map((k: any) => `${k.title}: ${k.content}`).join('\n')}` : ''
-    const contactsContext = contacts?.length ? `CONTACTS:\n${contacts.map((c: any) => `- ${c.name}${c.email ? ` (${c.email})` : ''}`).join('\n')}` : ''
-    const eventsContext = events?.length ? `UPCOMING:\n${events.map((e: any) => `- ${e.event_date}: ${e.title}`).join('\n')}` : ''
+    const memoryContext = memories?.length ? `MEMORY:\n${memories.map((m: Record<string, unknown>) => `- ${m.key}: ${m.value}`).join('\n')}` : ''
+    const knowledgeContext = knowledge?.length ? `KNOWLEDGE:\n${knowledge.map((k: Record<string, unknown>) => `${k.title}: ${k.content}`).join('\n')}` : ''
+    const contactsContext = contacts?.length ? `CONTACTS:\n${contacts.map((c: Record<string, unknown>) => `- ${c.name}${c.email ? ` (${c.email})` : ''}`).join('\n')}` : ''
+    const eventsContext = events?.length ? `UPCOMING:\n${events.map((e: Record<string, unknown>) => `- ${e.event_date}: ${e.title}`).join('\n')}` : ''
 
     const systemPrompt = `You are ${agent.agent_name}, AI business agent for ${agent.business_name}.
 Today: ${formatDate(today)}
@@ -67,6 +67,9 @@ Be concise and actionable. Format output clearly.`
     })
 
     const data = await response.json()
+    if (!data.content?.[0]?.text) {
+      return NextResponse.json({ error: 'AI response failed' }, { status: 500 })
+    }
     const result = data.content[0].text
 
     await supabase.from('automation_results').insert({

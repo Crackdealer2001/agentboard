@@ -12,6 +12,10 @@ export default function DocumentPage() {
   const [preview, setPreview] = useState<{ html: string; type: string } | null>(null)
 
   useEffect(() => {
+    document.title = 'Documents | AgentBoard'
+  }, [])
+
+  useEffect(() => {
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/auth'); return }

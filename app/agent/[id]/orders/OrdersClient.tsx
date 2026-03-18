@@ -58,7 +58,7 @@ export default function OrdersClient({ agent, orders }: {
     <div className="app-layout">
       <Sidebar />
 
-      {selected && (
+      {selected !== null && (
         <div className="modal-overlay">
           <div style={{
             background: 'var(--bg2)', border: '1px solid var(--border2)',
@@ -89,10 +89,10 @@ export default function OrdersClient({ agent, orders }: {
                 <div style={{ fontSize: 18, fontWeight: 700, fontFamily: 'var(--sidebar-font)', marginBottom: 4 }}>
                   {selected.client_name as string}
                 </div>
-                {selected.client_email && (
+                {!!selected.client_email && (
                   <div style={{ fontSize: 13, color: 'var(--fg3)', fontFamily: 'var(--sidebar-font)' }}>{selected.client_email as string}</div>
                 )}
-                {selected.client_phone && (
+                {!!selected.client_phone && (
                   <div style={{ fontSize: 13, color: 'var(--fg3)', fontFamily: 'var(--sidebar-font)' }}>{selected.client_phone as string}</div>
                 )}
               </div>
@@ -156,13 +156,13 @@ export default function OrdersClient({ agent, orders }: {
                 </div>
               </div>
 
-              {selected.due_date && (
+              {!!selected.due_date && (
                 <div style={{ padding: '10px 16px', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 8, marginBottom: 20, fontFamily: 'var(--sidebar-font)', fontSize: 13, color: 'var(--fg3)' }}>
                   Due: <strong style={{ color: 'var(--fg)' }}>{formatDate(selected.due_date as string)}</strong>
                 </div>
               )}
 
-              {selected.notes && (
+              {!!selected.notes && (
                 <div style={{ padding: '12px 16px', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 8, marginBottom: 20, fontSize: 13, color: 'var(--fg2)', fontFamily: 'var(--sidebar-font)', lineHeight: 1.6 }}>
                   {selected.notes as string}
                 </div>
@@ -282,7 +282,7 @@ export default function OrdersClient({ agent, orders }: {
                         <div style={{ fontSize: 13, fontWeight: 500, fontFamily: 'var(--sidebar-font)', color: 'var(--fg)' }}>
                           {order.client_name as string}
                         </div>
-                        {order.client_email && (
+                        {!!order.client_email && (
                           <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--fg3)' }}>
                             {order.client_email as string}
                           </div>

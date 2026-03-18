@@ -1,5 +1,10 @@
 import Navbar from '@/components/Navbar'
 import Link from 'next/link'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Terms of Service | AgentBoard',
+}
 
 export default function TermsPage() {
   const sections = [

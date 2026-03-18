@@ -1,5 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
 import AgentClient from './AgentClient'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Agent | AgentBoard',
+}
 
 export default async function AgentPage({
   params,

@@ -34,7 +34,7 @@ export async function sendProposalNotification(taskId: string, message: string, 
           <p><strong>Task:</strong> ${task.title}</p>
           <p><strong>Message:</strong> ${message}</p>
           <p><strong>Bid:</strong> $${bidAmount}</p>
-          <a href="https://agentboard-five.vercel.app/dashboard">View on Dashboard</a>
+          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://agentboard-five.vercel.app'}/dashboard">View on Dashboard</a>
         </div>
       `,
     })
