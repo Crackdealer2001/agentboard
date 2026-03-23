@@ -1,53 +1,10 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 
 const MARQUEE_TEXT = "SCOPE · PROPOSAL · CLARITY · FREELANCE · PROTECT YOUR WORK · ";
 
 export default function HomePage() {
-  const dotRef  = useRef<HTMLDivElement>(null);
-  const ringRef = useRef<HTMLDivElement>(null);
-  const mouse   = useRef({ x: -200, y: -200 });
-  const ringPos = useRef({ x: -200, y: -200 });
-  const hovering = useRef(false);
-  const rafId    = useRef<number>(0);
   const [scrolled, setScrolled] = useState(false);
-
-  /* ─── Custom cursor at 60fps ─── */
-  useEffect(() => {
-    const onMove  = (e: MouseEvent) => { mouse.current = { x: e.clientX, y: e.clientY }; };
-    const onEnter = (e: MouseEvent) => { if ((e.target as HTMLElement).closest("a,button")) hovering.current = true; };
-    const onLeave = (e: MouseEvent) => { if ((e.target as HTMLElement).closest("a,button")) hovering.current = false; };
-
-    const tick = () => {
-      ringPos.current.x += (mouse.current.x - ringPos.current.x) * 0.1;
-      ringPos.current.y += (mouse.current.y - ringPos.current.y) * 0.1;
-
-      if (dotRef.current) {
-        dotRef.current.style.transform = `translate(${mouse.current.x - 4}px, ${mouse.current.y - 4}px)`;
-      }
-      if (ringRef.current) {
-        const size = hovering.current ? 64 : 40;
-        const bg   = hovering.current ? "rgba(255,255,255,0.1)" : "transparent";
-        ringRef.current.style.transform = `translate(${ringPos.current.x - size / 2}px, ${ringPos.current.y - size / 2}px)`;
-        ringRef.current.style.width  = `${size}px`;
-        ringRef.current.style.height = `${size}px`;
-        ringRef.current.style.background = bg;
-      }
-      rafId.current = requestAnimationFrame(tick);
-    };
-
-    document.addEventListener("mousemove",  onMove);
-    document.addEventListener("mouseover",  onEnter);
-    document.addEventListener("mouseout",   onLeave);
-    rafId.current = requestAnimationFrame(tick);
-
-    return () => {
-      document.removeEventListener("mousemove",  onMove);
-      document.removeEventListener("mouseover",  onEnter);
-      document.removeEventListener("mouseout",   onLeave);
-      cancelAnimationFrame(rafId.current);
-    };
-  }, []);
 
   /* ─── Nav blur on scroll ─── */
   useEffect(() => {
@@ -80,8 +37,6 @@ export default function HomePage() {
 
       {/* ─── Injected styles ─── */}
       <style>{`
-        *, *::before, *::after { cursor: none !important; }
-
         /* Scroll-reveal base state */
         .rv {
           opacity: 0;
@@ -194,29 +149,6 @@ export default function HomePage() {
           .feature-num { font-size: 72px !important; width: auto !important; }
         }
       `}</style>
-
-      {/* ─── Cursor dot ─── */}
-      <div ref={dotRef} style={{
-        position: "fixed", top: 0, left: 0,
-        width: 8, height: 8,
-        background: "#fff",
-        borderRadius: "50%",
-        pointerEvents: "none",
-        zIndex: 9999,
-        willChange: "transform",
-      }} />
-
-      {/* ─── Cursor ring ─── */}
-      <div ref={ringRef} style={{
-        position: "fixed", top: 0, left: 0,
-        width: 40, height: 40,
-        border: "1px solid rgba(255,255,255,0.4)",
-        borderRadius: "50%",
-        pointerEvents: "none",
-        zIndex: 9998,
-        willChange: "transform",
-        transition: "width 0.2s ease, height 0.2s ease, background 0.2s ease",
-      }} />
 
       {/* ─── NAVIGATION ─── */}
       <nav className="nav-inner" style={{
