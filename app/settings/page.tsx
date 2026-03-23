@@ -1,12 +1,11 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import Sidebar from "@/components/Sidebar";
 
 export default function SettingsPage() {
   const router = useRouter();
-  const supabase = createClient();
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
   const [fullName, setFullName] = useState("");
   const [saving, setSaving] = useState(false);
@@ -15,14 +14,18 @@ export default function SettingsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState("");
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }: { data: { user: { id: string; email?: string } | null } }) => {
-      if (!data.user) { router.push("/auth"); return; }
-      setUser(data.user);
-      supabase.from("profiles").select("full_name").eq("id", data.user.id).single().then(({ data: p }: { data: { full_name?: string } | null }) => {
-        if (p) setFullName(p.full_name || "");
+    let mounted = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!mounted) return;
+      const u = data.session?.user ?? null;
+      if (!u) { router.replace("/auth"); return; }
+      setUser({ id: u.id, email: u.email });
+      supabase.from("profiles").select("full_name").eq("id", u.id).single().then(({ data: p }: { data: { full_name?: string } | null }) => {
+        if (mounted && p) setFullName(p.full_name || "");
       });
     });
-  }, []);
+    return () => { mounted = false; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function saveProfile() {
     if (!user) return;

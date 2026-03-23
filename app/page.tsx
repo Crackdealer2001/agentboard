@@ -1,17 +1,23 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 
 export default function HomePage() {
   const router = useRouter();
-  const supabase = createClient();
+  const redirected = useRef(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }: { data: { user: { id: string } | null } }) => {
-      if (data.user) router.push("/dashboard");
+    let mounted = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!mounted || redirected.current) return;
+      if (data.session) {
+        redirected.current = true;
+        router.replace("/dashboard");
+      }
     });
-  }, []);
+    return () => { mounted = false; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div style={{ minHeight: "100vh", background: "#ffffff" }}>

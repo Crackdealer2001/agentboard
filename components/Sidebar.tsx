@@ -1,24 +1,26 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { createClient } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 
 export default function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
-  const supabase = createClient();
   const [email, setEmail] = useState("");
-  const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }: { data: { user: { email?: string } | null } }) => {
-      if (data.user) setEmail(data.user.email || "");
+    let mounted = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (mounted && data.session?.user) {
+        setEmail(data.session.user.email || "");
+      }
     });
-  }, []);
+    return () => { mounted = false; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function signOut() {
     await supabase.auth.signOut();
-    router.push("/");
+    router.replace("/");
   }
 
   const nav = [
