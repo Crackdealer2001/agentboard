@@ -1,164 +1,95 @@
-'use client'
-import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
-import Navbar from '@/components/Navbar'
+"use client";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { createClient } from "@/lib/supabase";
 
-export default function AuthPage() {
-  const router = useRouter()
-  useEffect(() => { document.title = 'Sign In | AgentBoard' }, [])
-  const [mode, setMode] = useState<'signin' | 'signup' | 'reset'>('signup')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+function AuthForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const supabase = createClient();
+  const [mode, setMode] = useState<"signin" | "signup" | "reset">("signin");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const redirectTo = typeof window !== 'undefined'
-    ? new URLSearchParams(window.location.search).get('redirect') || '/dashboard'
-    : '/dashboard'
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }: { data: { user: { id: string } | null } }) => {
+      if (data.user) router.push("/dashboard");
+    });
+  }, []);
 
-  const handleAuth = async () => {
-    setLoading(true)
-    setError('')
-    setSuccess('')
-
-    if (mode === 'reset') {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/update-password`,
-      })
-      if (error) {
-        setError(error.message)
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(""); setSuccess(""); setLoading(true);
+    try {
+      if (mode === "reset") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/auth/update-password` });
+        if (error) throw error;
+        setSuccess("Check your email for a reset link.");
+      } else if (mode === "signup") {
+        const { error } = await supabase.auth.signUp({ email, password });
+        if (error) throw error;
+        setSuccess("Check your email to confirm your account.");
       } else {
-        setSuccess('Password reset email sent! Check your inbox.')
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        const redirect = searchParams.get("redirect") || "/dashboard";
+        router.push(redirect);
       }
-      setLoading(false)
-      return
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setLoading(false);
     }
-
-    if (mode === 'signup') {
-      const { error } = await supabase.auth.signUp({ email, password })
-      if (error) {
-        setError(error.message)
-      } else {
-        setSuccess('Account created! Signing you in...')
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-        if (!signInError) router.push(redirectTo)
-      }
-    } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) {
-        setError(error.message)
-      } else {
-        router.push(redirectTo)
-      }
-    }
-    setLoading(false)
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') handleAuth()
-  }
-
-  const inputStyle = {
-    width: '100%', padding: '12px 16px',
-    border: '1px solid var(--border2)', borderRadius: 10,
-    fontFamily: 'var(--sans)', fontSize: 14,
-    background: 'var(--bg2)', color: 'var(--fg)', outline: 'none',
-    transition: 'border-color 0.15s',
-  }
+  const inputStyle: React.CSSProperties = { width: "100%", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px", fontSize: 15, outline: "none", background: "#fff", color: "#0a0a0a", boxSizing: "border-box" };
 
   return (
-    <>
-      <Navbar />
-      <div style={{ maxWidth: 460, margin: '0 auto', padding: '72px 24px' }}>
-
-        <div style={{ marginBottom: 36, textAlign: 'center' }}>
-          <div style={{ width: 56, height: 56, borderRadius: 14, background: 'var(--fg)', color: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontFamily: 'var(--serif)', fontSize: 22 }}>
-            A
-          </div>
-          <h1 style={{ fontFamily: 'var(--serif)', fontSize: 32, fontWeight: 400, marginBottom: 8 }}>
-            {mode === 'signup' ? 'Create your account' : mode === 'signin' ? 'Welcome back' : 'Reset your password'}
+    <div style={{ minHeight: "100vh", background: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ width: "100%", maxWidth: 400 }}>
+        <a href="/" style={{ display: "block", fontWeight: 700, fontSize: 22, color: "#0a0a0a", marginBottom: 40, textAlign: "center" }}>Scope</a>
+        <div style={{ background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: 12, padding: "36px 32px", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#0a0a0a", margin: "0 0 6px" }}>
+            {mode === "signin" ? "Welcome back" : mode === "signup" ? "Create account" : "Reset password"}
           </h1>
-          <p style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.7 }}>
-            {mode === 'signup' ? 'Sign up free and build your AI business agent in minutes.' : mode === 'signin' ? 'Sign in to access your AI business agents.' : 'Enter your email and we\'ll send you a reset link.'}
+          <p style={{ fontSize: 14, color: "#6b7280", margin: "0 0 28px" }}>
+            {mode === "signin" ? "Sign in to your account" : mode === "signup" ? "Start turning briefs into proposals" : "We'll send you a reset link"}
           </p>
+          {error && <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "10px 14px", fontSize: 14, color: "#991b1b", marginBottom: 20 }}>{error}</div>}
+          {success && <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, padding: "10px 14px", fontSize: 14, color: "#166534", marginBottom: 20 }}>{success}</div>}
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <input style={inputStyle} type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            {mode !== "reset" && (
+              <input style={inputStyle} type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+            )}
+            <button type="submit" disabled={loading} style={{ background: "#0a0a0a", color: "#fff", border: "none", borderRadius: 8, padding: "11px 20px", fontSize: 15, fontWeight: 600, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, marginTop: 4 }}>
+              {loading ? "Please wait..." : mode === "signin" ? "Sign in" : mode === "signup" ? "Create account" : "Send reset link"}
+            </button>
+          </form>
+          <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 8, textAlign: "center" }}>
+            {mode === "signin" && (
+              <>
+                <button onClick={() => setMode("signup")} style={{ background: "none", border: "none", fontSize: 13, color: "#6b7280", cursor: "pointer" }}>No account? <span style={{ color: "#0a0a0a", fontWeight: 600 }}>Sign up</span></button>
+                <button onClick={() => setMode("reset")} style={{ background: "none", border: "none", fontSize: 13, color: "#6b7280", cursor: "pointer" }}>Forgot password?</button>
+              </>
+            )}
+            {mode !== "signin" && (
+              <button onClick={() => setMode("signin")} style={{ background: "none", border: "none", fontSize: 13, color: "#6b7280", cursor: "pointer" }}>Back to <span style={{ color: "#0a0a0a", fontWeight: 600 }}>sign in</span></button>
+            )}
+          </div>
         </div>
-
-        {mode !== 'reset' && (
-          <div style={{ display: 'flex', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10, padding: 4, marginBottom: 28 }}>
-            <button onClick={() => { setMode('signup'); setError(''); setSuccess('') }}
-              style={{ flex: 1, padding: '9px', borderRadius: 7, border: 'none', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 12, background: mode === 'signup' ? 'var(--fg)' : 'transparent', color: mode === 'signup' ? 'var(--bg)' : 'var(--muted)', transition: 'all 0.15s' }}>
-              Sign up
-            </button>
-            <button onClick={() => { setMode('signin'); setError(''); setSuccess('') }}
-              style={{ flex: 1, padding: '9px', borderRadius: 7, border: 'none', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 12, background: mode === 'signin' ? 'var(--fg)' : 'transparent', color: mode === 'signin' ? 'var(--bg)' : 'var(--muted)', transition: 'all 0.15s' }}>
-              Sign in
-            </button>
-          </div>
-        )}
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 20 }}>
-          <div>
-            <label style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 8, letterSpacing: 0.5 }}>Email address</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={handleKeyDown} placeholder="you@example.com" style={inputStyle} autoFocus />
-          </div>
-          {mode !== 'reset' && (
-            <div>
-              <label style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 8, letterSpacing: 0.5 }}>Password</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={handleKeyDown} placeholder="Min. 6 characters" style={inputStyle} />
-            </div>
-          )}
-        </div>
-
-        {mode === 'signin' && (
-          <div style={{ textAlign: 'right', marginTop: -8, marginBottom: 16 }}>
-            <button onClick={() => { setMode('reset'); setError(''); setSuccess('') }}
-              style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 11, textDecoration: 'underline' }}>
-              Forgot password?
-            </button>
-          </div>
-        )}
-
-        {error && (
-          <div style={{ background: '#2a0a0a', border: '1px solid #4a1a1a', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontFamily: 'var(--mono)', fontSize: 12, color: '#f87171' }}>
-            ✗ {error}
-          </div>
-        )}
-
-        {success && (
-          <div style={{ background: '#0d2e14', border: '1px solid #1a4a24', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontFamily: 'var(--mono)', fontSize: 12, color: '#4ade80' }}>
-            ✓ {success}
-          </div>
-        )}
-
-        <button onClick={handleAuth} disabled={loading || !email || (mode !== 'reset' && !password)} className="btn btn-accent"
-          style={{ width: '100%', fontSize: 14, padding: '13px', opacity: (loading || !email || (mode !== 'reset' && !password)) ? 0.5 : 1 }}>
-          {loading ? 'Please wait...' : mode === 'signup' ? 'Create account →' : mode === 'signin' ? 'Sign in →' : 'Send reset link →'}
-        </button>
-
-        {mode === 'reset' ? (
-          <p style={{ textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', marginTop: 20 }}>
-            Remember your password?{' '}
-            <button onClick={() => { setMode('signin'); setError(''); setSuccess('') }}
-              style={{ background: 'none', border: 'none', color: 'var(--fg)', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 11, textDecoration: 'underline' }}>
-              Sign in
-            </button>
-          </p>
-        ) : (
-          <p style={{ textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', marginTop: 20 }}>
-            {mode === 'signup' ? 'Already have an account?' : "Don't have an account?"}{' '}
-            <button onClick={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); setError(''); setSuccess('') }}
-              style={{ background: 'none', border: 'none', color: 'var(--fg)', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 11, textDecoration: 'underline' }}>
-              {mode === 'signup' ? 'Sign in' : 'Sign up free'}
-            </button>
-          </p>
-        )}
-
-        <p style={{ textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--muted)', marginTop: 12 }}>
-          Free to use · No credit card required
-        </p>
       </div>
-    </>
-  )
+    </div>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense>
+      <AuthForm />
+    </Suspense>
+  );
 }

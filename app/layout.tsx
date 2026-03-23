@@ -1,35 +1,24 @@
-import type { Metadata } from 'next'
-import { Space_Grotesk } from 'next/font/google'
-import './globals.css'
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
 
-const spaceGrotesk = Space_Grotesk({
-  subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700'],
-  variable: '--sidebar-font',
-  display: 'swap',
-})
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'AgentBoard — AI Business Agent Platform',
-  description: 'Build a custom AI agent for your business in 5 minutes.',
-}
+  title: "Scope — Turn briefs into proposals",
+  description: "Paste any client enquiry. Get a structured scope, risk analysis, and ready-to-send proposal in minutes.",
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={spaceGrotesk.variable}>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Inter:wght@300;400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      <body>{children}</body>
+    <html lang="en">
+      <body className={inter.className} style={{ margin: 0, padding: 0, background: "#ffffff" }}>
+        {children}
+      </body>
     </html>
-  )
+  );
 }

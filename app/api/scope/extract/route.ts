@@ -1,0 +1,94 @@
+import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import Anthropic from "@anthropic-ai/sdk";
+
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+export async function POST(req: NextRequest) {
+  try {
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        cookies: {
+          getAll() { return cookieStore.getAll(); },
+          setAll() {},
+        },
+      }
+    );
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const { enquiry } = await req.json();
+    if (!enquiry) return NextResponse.json({ error: "No enquiry provided" }, { status: 400 });
+
+    // Create project first
+    const { data: project, error: insertError } = await supabase
+      .from("scope_projects")
+      .insert({ user_id: user.id, original_enquiry: enquiry, status: "draft" })
+      .select()
+      .single();
+
+    if (insertError || !project) return NextResponse.json({ error: "Failed to create project" }, { status: 500 });
+
+    // Extract with Claude
+    const message = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 2000,
+      messages: [{
+        role: "user",
+        content: `You are an expert project scoper. Analyse this client enquiry and extract structured information.
+
+Client enquiry:
+"""
+${enquiry}
+"""
+
+Respond with ONLY a valid JSON object (no markdown, no code blocks) with these exact fields:
+{
+  "suggested_title": "concise project title",
+  "project_type": "type of project (e.g. Website, Mobile App, Branding, etc.)",
+  "goals": ["array of main project goals"],
+  "features_requested": ["array of specific features/requirements mentioned"],
+  "deadline": "deadline if mentioned, else null",
+  "budget_mentioned": "budget if mentioned, else null",
+  "missing_details": ["array of important details that are unclear or missing"],
+  "risk_flags": ["array of potential risks or concerns for the project"],
+  "clarifying_questions": ["array of 3-5 specific questions to ask the client to fill in the gaps"]
+}`
+      }]
+    });
+
+    const content = message.content[0];
+    if (content.type !== "text") throw new Error("Unexpected response from AI");
+
+    let extracted;
+    try {
+      extracted = JSON.parse(content.text);
+    } catch {
+      // Try to extract JSON from the text
+      const match = content.text.match(/\{[\s\S]*\}/);
+      if (!match) throw new Error("Failed to parse AI response");
+      extracted = JSON.parse(match[0]);
+    }
+
+    const { suggested_title, clarifying_questions, risk_flags, ...extractedInfo } = extracted;
+
+    // Update project
+    await supabase.from("scope_projects").update({
+      title: suggested_title,
+      extracted_info: extractedInfo,
+      clarifying_questions: clarifying_questions || [],
+      risk_flags: risk_flags || [],
+      updated_at: new Date().toISOString(),
+    }).eq("id", project.id);
+
+    return NextResponse.json({ projectId: project.id, title: suggested_title, extracted: extractedInfo });
+  } catch (err: unknown) {
+    console.error("Extract error:", err);
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Server error" }, { status: 500 });
+  }
+}
