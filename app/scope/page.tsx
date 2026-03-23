@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
+import ProjectsClient from "./ProjectsClient";
 
 export default async function ScopePage() {
   const cookieStore = await cookies();
@@ -54,49 +55,7 @@ export default async function ScopePage() {
           </Link>
         </div>
 
-        {!projects || projects.length === 0 ? (
-          <div style={{ paddingTop: 80, textAlign: "center" }}>
-            <p style={{ fontSize: 32, fontWeight: 800, color: "var(--bg3)", letterSpacing: "-0.03em", margin: "0 0 24px" }}>No projects yet</p>
-            <Link href="/scope/new" style={{ background: "var(--accent)", color: "var(--accent-text)", padding: "12px 24px", fontSize: 14, fontWeight: 700, display: "inline-block" }}>
-              Create your first project →
-            </Link>
-          </div>
-        ) : (
-          <div style={{ borderTop: "1px solid var(--border)" }}>
-            {/* Table header */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 140px 40px", padding: "12px 0", borderBottom: "1px solid var(--border)" }}>
-              {["Project", "Status", "Date", ""].map((h) => (
-                <div key={h} style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text4)" }}>{h}</div>
-              ))}
-            </div>
-            {projects.map((p) => (
-              <Link
-                key={p.id}
-                href={`/scope/${p.id}`}
-                style={{ display: "grid", gridTemplateColumns: "1fr 100px 140px 40px", padding: "20px 0", borderBottom: "1px solid var(--border)", color: "inherit", alignItems: "center" }}
-              >
-                <div>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text)", letterSpacing: "-0.01em", marginBottom: 4 }}>{p.title || "Untitled project"}</div>
-                  {p.original_enquiry && (
-                    <div style={{ fontSize: 13, color: "var(--text4)", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis", maxWidth: 400 }}>
-                      {p.original_enquiry}
-                    </div>
-                  )}
-                </div>
-                <span style={{
-                  fontSize: 11, padding: "3px 8px", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase",
-                  background: p.status === "complete" ? "var(--accent)" : "var(--bg3)",
-                  color: p.status === "complete" ? "var(--accent-text)" : "var(--text3)",
-                  display: "inline-block", width: "fit-content"
-                }}>
-                  {p.status === "complete" ? "Complete" : "Draft"}
-                </span>
-                <span style={{ fontSize: 13, color: "var(--text4)" }}>{new Date(p.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>
-                <span style={{ fontSize: 16, color: "var(--text4)" }}>→</span>
-              </Link>
-            ))}
-          </div>
-        )}
+        <ProjectsClient initialProjects={projects ?? []} />
 
       </main>
     </div>

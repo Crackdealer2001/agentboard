@@ -4,6 +4,86 @@ import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 
+function DeleteModal({ projectId, onClose }: { projectId: string; onClose: () => void }) {
+  const router = useRouter();
+  const [confirm, setConfirm] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const valid = confirm === "DELETE";
+
+  async function handleDelete() {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/scope/delete", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId }),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || "Failed to delete");
+      }
+      router.push("/scope");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div style={{ background: "#0d0d0d", border: "1px solid var(--border)", padding: "40px 36px", width: "100%", maxWidth: 420 }}>
+        <h2 style={{ fontSize: 20, fontWeight: 800, color: "var(--text)", margin: "0 0 8px", letterSpacing: "-0.03em" }}>Delete project</h2>
+        <p style={{ fontSize: 14, color: "var(--text3)", margin: "0 0 28px", lineHeight: 1.6 }}>
+          This action cannot be undone. Type <span style={{ fontWeight: 700, color: "var(--text)" }}>DELETE</span> to confirm.
+        </p>
+        <input
+          type="text"
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          placeholder="Type DELETE"
+          style={{ width: "100%", border: "1px solid var(--border2)", padding: "12px 14px", fontSize: 14, background: "var(--bg)", color: "var(--text)", outline: "none", boxSizing: "border-box", marginBottom: 16 }}
+        />
+        {error && (
+          <div style={{ background: "var(--err-bg)", border: "1px solid var(--err-bdr)", padding: "10px 14px", fontSize: 13, color: "var(--err-text)", marginBottom: 16 }}>
+            {error}
+          </div>
+        )}
+        <div style={{ display: "flex", gap: 12 }}>
+          <button
+            onClick={handleDelete}
+            disabled={!valid || loading}
+            style={{
+              flex: 1,
+              height: 44,
+              background: valid ? "#ef4444" : "var(--bg3)",
+              color: valid ? "#ffffff" : "var(--text4)",
+              border: "none",
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: valid && !loading ? "pointer" : "not-allowed",
+              letterSpacing: "0.02em",
+              transition: "background 0.15s, color 0.15s",
+            }}
+          >
+            {loading ? "Deleting..." : "Delete project"}
+          </button>
+          <button
+            onClick={onClose}
+            style={{ flex: 1, height: 44, background: "none", border: "1px solid var(--border)", color: "var(--text3)", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface Project {
   id: string;
   title: string;
@@ -70,6 +150,7 @@ export default function ScopeProjectPage() {
   const [title, setTitle] = useState("");
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
+  const [showDelete, setShowDelete] = useState(false);
   const [enquiryExpanded, setEnquiryExpanded] = useState(false);
   const [expandedPhases, setExpandedPhases] = useState<Record<number, boolean>>({});
   const [scopeVisible, setScopeVisible] = useState(false);
@@ -140,6 +221,7 @@ export default function ScopeProjectPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
+      {showDelete && <DeleteModal projectId={project.id} onClose={() => setShowDelete(false)} />}
       <style>{`
         @media (max-width: 640px) {
           .scope-body { padding: 24px !important; }
@@ -186,6 +268,12 @@ export default function ScopeProjectPage() {
               Generate proposal →
             </Link>
           )}
+          <button
+            onClick={() => setShowDelete(true)}
+            style={{ background: "none", border: "1px solid #ef4444", color: "#ef4444", padding: "8px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}
+          >
+            Delete
+          </button>
         </div>
       </div>
 
