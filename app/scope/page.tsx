@@ -1,33 +1,38 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
 
 export default async function ScopePage() {
   const cookieStore = await cookies();
-  const allCookies = cookieStore.getAll();
-  const accessToken = allCookies.find((c) => c.name.includes("access-token"))?.value;
-  const refreshToken = allCookies.find((c) => c.name.includes("refresh-token"))?.value;
 
-  const authClient = createClient(
+  const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return cookieStore.getAll(); },
+        setAll() {},
+      },
+    }
   );
 
-  if (accessToken && refreshToken) {
-    await authClient.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-  }
-
-  const { data: { user } } = await authClient.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth");
 
-  const supabase = createClient(
+  const serviceSupabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      cookies: {
+        getAll() { return cookieStore.getAll(); },
+        setAll() {},
+      },
+    }
   );
 
-  const { data: projects } = await supabase
+  const { data: projects } = await serviceSupabase
     .from("scope_projects")
     .select("id, title, status, created_at, original_enquiry")
     .eq("user_id", user.id)
