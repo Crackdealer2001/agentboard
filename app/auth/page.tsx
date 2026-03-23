@@ -43,17 +43,17 @@ function AuthForm() {
     }
   }
 
-  const inputStyle: React.CSSProperties = { width: "100%", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px", fontSize: 15, outline: "none", background: "#fff", color: "#0a0a0a", boxSizing: "border-box" };
+  const inputStyle: React.CSSProperties = { width: "100%", border: "1px solid var(--border)", borderRadius: 8, padding: "10px 14px", fontSize: 15, outline: "none", background: "var(--surface)", color: "var(--text)", boxSizing: "border-box" };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+    <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
       <div style={{ width: "100%", maxWidth: 400 }}>
-        <a href="/" style={{ display: "block", fontWeight: 700, fontSize: 22, color: "#0a0a0a", marginBottom: 40, textAlign: "center" }}>Scope</a>
-        <div style={{ background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: 12, padding: "36px 32px", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#0a0a0a", margin: "0 0 6px" }}>
+        <a href="/" style={{ display: "block", fontWeight: 700, fontSize: 22, color: "var(--text)", marginBottom: 40, textAlign: "center" }}>Scope</a>
+        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "36px 32px", boxShadow: "var(--shadow)" }}>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--text)", margin: "0 0 6px" }}>
             {mode === "signin" ? "Welcome back" : mode === "signup" ? "Create account" : "Reset password"}
           </h1>
-          <p style={{ fontSize: 14, color: "#6b7280", margin: "0 0 28px" }}>
+          <p style={{ fontSize: 14, color: "var(--text3)", margin: "0 0 28px" }}>
             {mode === "signin" ? "Sign in to your account" : mode === "signup" ? "Start turning briefs into proposals" : "We'll send you a reset link"}
           </p>
           {error && <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "10px 14px", fontSize: 14, color: "#991b1b", marginBottom: 20 }}>{error}</div>}
@@ -63,19 +63,19 @@ function AuthForm() {
             {mode !== "reset" && (
               <input style={inputStyle} type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
             )}
-            <button type="submit" disabled={loading} style={{ background: "#0a0a0a", color: "#fff", border: "none", borderRadius: 8, padding: "11px 20px", fontSize: 15, fontWeight: 600, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, marginTop: 4 }}>
+            <button type="submit" disabled={loading} style={{ background: "var(--accent)", color: "var(--accent-text)", border: "none", borderRadius: 8, padding: "11px 20px", fontSize: 15, fontWeight: 600, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, marginTop: 4 }}>
               {loading ? "Please wait..." : mode === "signin" ? "Sign in" : mode === "signup" ? "Create account" : "Send reset link"}
             </button>
           </form>
           <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 8, textAlign: "center" }}>
             {mode === "signin" && (
               <>
-                <button onClick={() => setMode("signup")} style={{ background: "none", border: "none", fontSize: 13, color: "#6b7280", cursor: "pointer" }}>No account? <span style={{ color: "#0a0a0a", fontWeight: 600 }}>Sign up</span></button>
-                <button onClick={() => setMode("reset")} style={{ background: "none", border: "none", fontSize: 13, color: "#6b7280", cursor: "pointer" }}>Forgot password?</button>
+                <button onClick={() => setMode("signup")} style={{ background: "none", border: "none", fontSize: 13, color: "var(--text3)", cursor: "pointer" }}>No account? <span style={{ color: "var(--text)", fontWeight: 600 }}>Sign up</span></button>
+                <button onClick={() => setMode("reset")} style={{ background: "none", border: "none", fontSize: 13, color: "var(--text3)", cursor: "pointer" }}>Forgot password?</button>
               </>
             )}
             {mode !== "signin" && (
-              <button onClick={() => setMode("signin")} style={{ background: "none", border: "none", fontSize: 13, color: "#6b7280", cursor: "pointer" }}>Back to <span style={{ color: "#0a0a0a", fontWeight: 600 }}>sign in</span></button>
+              <button onClick={() => setMode("signin")} style={{ background: "none", border: "none", fontSize: 13, color: "var(--text3)", cursor: "pointer" }}>Back to <span style={{ color: "var(--text)", fontWeight: 600 }}>sign in</span></button>
             )}
           </div>
         </div>
