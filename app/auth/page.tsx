@@ -59,7 +59,11 @@ function AuthForm() {
       <style>{`
         .auth-input:focus { border-color: var(--accent) !important; }
         .auth-link:hover { color: var(--text) !important; }
+        .auth-back:hover { color: var(--text) !important; }
       `}</style>
+      <a href="/" className="auth-back" style={{ position: "absolute", top: 24, left: 24, fontSize: 13, color: "var(--text3)", textDecoration: "none", fontWeight: 500 }}>
+        ← Back
+      </a>
       <div style={{ width: "100%", maxWidth: 400 }}>
         <a href="/" style={{ display: "block", fontWeight: 800, fontSize: 22, color: "var(--text)", marginBottom: 48, textAlign: "center", letterSpacing: "-0.03em" }}>
           Scope
