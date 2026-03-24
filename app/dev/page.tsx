@@ -4,6 +4,7 @@ import { useState } from "react";
 export default function DevPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -13,37 +14,52 @@ export default function DevPage() {
     }
     localStorage.setItem("dev_mode", "true");
     document.cookie = "dev_mode=true; path=/; max-age=86400";
-    window.location.href = "/dev/dashboard";
+    setSuccess(true);
   }
 
   return (
     <div style={containerStyle}>
       <a href="/" style={backLinkStyle}>← Back to home</a>
-      <div style={cardStyle}>
-        <p style={labelStyle}>DEVELOPER ACCESS</p>
-        <h1 style={headingStyle}>Developer Portal</h1>
-        <p style={subtitleStyle}>Enter the developer password to access the full app</p>
 
-        <form onSubmit={handleSubmit} style={{ width: "100%" }}>
-          <input
-            type="password"
-            placeholder="Enter developer password"
-            value={password}
-            onChange={(e) => { setPassword(e.target.value); setError(""); }}
-            style={inputStyle}
-            className="dev-input"
-            autoFocus
-          />
-          {error && (
-            <p style={{ color: "#f44336", fontSize: 13, margin: "8px 0 0", fontWeight: 500 }}>
-              {error}
-            </p>
-          )}
-          <button type="submit" style={buttonStyle}>
-            Enter developer mode →
-          </button>
-        </form>
-      </div>
+      {success ? (
+        <div style={cardStyle}>
+          <p style={labelStyle}>DEVELOPER ACCESS</p>
+          <h1 style={headingStyle}>Password correct</h1>
+          <p style={subtitleStyle}>
+            Developer mode is active. Sign in with any account to access the full app — the payment wall will be bypassed.
+          </p>
+          <a href="/auth" style={buttonStyle}>
+            Go to sign in →
+          </a>
+        </div>
+      ) : (
+        <div style={cardStyle}>
+          <p style={labelStyle}>DEVELOPER ACCESS</p>
+          <h1 style={headingStyle}>Developer Portal</h1>
+          <p style={subtitleStyle}>Enter the developer password to access the full app</p>
+
+          <form onSubmit={handleSubmit} style={{ width: "100%" }}>
+            <input
+              type="password"
+              placeholder="Enter developer password"
+              value={password}
+              onChange={(e) => { setPassword(e.target.value); setError(""); }}
+              style={inputStyle}
+              className="dev-input"
+              autoFocus
+            />
+            {error && (
+              <p style={{ color: "#f44336", fontSize: 13, margin: "8px 0 0", fontWeight: 500 }}>
+                {error}
+              </p>
+            )}
+            <button type="submit" style={buttonStyle}>
+              Enter developer mode →
+            </button>
+          </form>
+        </div>
+      )}
+
       <style>{`.dev-input:focus { border-color: #c8f135 !important; outline: none; }`}</style>
     </div>
   );
@@ -125,4 +141,8 @@ const buttonStyle: React.CSSProperties = {
   letterSpacing: "0.02em",
   cursor: "pointer",
   marginTop: 12,
+  textDecoration: "none",
+  lineHeight: "52px",
+  textAlign: "center",
+  boxSizing: "border-box",
 };
