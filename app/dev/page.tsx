@@ -11,7 +11,9 @@ export default function DevPage() {
       setError("Incorrect password");
       return;
     }
-    window.location.href = "/auth?developer=true";
+    localStorage.setItem("dev_mode", "true");
+    document.cookie = "dev_mode=true; path=/; max-age=86400";
+    window.location.href = "/dashboard";
   }
 
   return (
@@ -20,7 +22,7 @@ export default function DevPage() {
       <div style={cardStyle}>
         <p style={labelStyle}>DEVELOPER ACCESS</p>
         <h1 style={headingStyle}>Developer Portal</h1>
-        <p style={subtitleStyle}>Enter the developer password, then sign in to activate access</p>
+        <p style={subtitleStyle}>Enter the developer password to access the full app</p>
 
         <form onSubmit={handleSubmit} style={{ width: "100%" }}>
           <input
@@ -38,7 +40,7 @@ export default function DevPage() {
             </p>
           )}
           <button type="submit" style={buttonStyle}>
-            Continue to sign in →
+            Enter developer mode →
           </button>
         </form>
       </div>
