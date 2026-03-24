@@ -3,7 +3,6 @@ import { cookies } from "next/headers";
 import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
 import { Greeting } from "./Greeting";
-import DevBanner from "./DevBanner";
 import DevModeGuard from "./DevModeGuard";
 
 export default async function DashboardPage() {
@@ -47,13 +46,11 @@ export default async function DashboardPage() {
 
   const { data: profile } = await serviceSupabase.from("profiles").select("full_name, business_name").eq("id", user.id).single();
   const name = profile?.full_name || profile?.business_name || user.email?.split("@")[0] || "there";
-  const isDevMode = cookieStore.get("dev_mode")?.value === "true";
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>
       <Sidebar />
       <main style={{ flex: 1, padding: "64px 48px" }}>
-        {isDevMode && <DevBanner />}
 
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 64, borderBottom: "1px solid var(--border)", paddingBottom: 40 }}>

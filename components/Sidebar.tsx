@@ -9,17 +9,9 @@ export default function Sidebar() {
   const pathname = usePathname();
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
-  const [isDeveloper, setIsDeveloper] = useState(false);
 
   useEffect(() => {
     let mounted = true;
-
-    // Dev mode — cookie-only, no DB check
-    if (localStorage.getItem("dev_mode") === "true") {
-      setFullName("Developer");
-      setIsDeveloper(true);
-      return;
-    }
 
     supabase.auth.getSession().then(({ data }) => {
       if (!mounted) return;
@@ -76,24 +68,10 @@ export default function Sidebar() {
       </nav>
       <div style={{ padding: "20px 24px", borderTop: "1px solid var(--border)" }}>
         <div style={{ marginBottom: 12 }}>
-          {fullName ? (
-            <>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: "-0.01em" }}>{fullName}</div>
-                {isDeveloper && (
-                  <span style={{ background: "#c8f135", color: "#000", fontSize: 10, fontWeight: 700, padding: "2px 6px", letterSpacing: "0.04em", flexShrink: 0 }}>DEV</span>
-                )}
-              </div>
-              <div style={{ fontSize: 11, color: "var(--text4)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: "0.02em" }}>{email}</div>
-            </>
-          ) : (
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <div style={{ fontSize: 11, color: "var(--text4)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: "0.02em" }}>{email}</div>
-              {isDeveloper && (
-                <span style={{ background: "#c8f135", color: "#000", fontSize: 10, fontWeight: 700, padding: "2px 6px", letterSpacing: "0.04em", flexShrink: 0 }}>DEV</span>
-              )}
-            </div>
-          )}
+          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: "-0.01em", marginBottom: 2 }}>
+            {fullName}
+          </div>
+          <div style={{ fontSize: 11, color: "var(--text4)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: "0.02em" }}>{email}</div>
         </div>
         <DarkModeToggle />
         <button
