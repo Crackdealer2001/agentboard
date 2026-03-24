@@ -24,7 +24,9 @@ export default function DevPage() {
         return;
       }
       localStorage.setItem("dev_token", data.token);
-      router.replace("/dashboard");
+      localStorage.setItem("dev_mode", "true");
+      document.cookie = "dev_mode=true; path=/; max-age=31536000";
+      window.location.href = "/dashboard";
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
