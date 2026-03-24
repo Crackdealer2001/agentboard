@@ -21,7 +21,50 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const pathname = request.nextUrl.pathname
+
+  const publicRoutes = ['/', '/auth', '/dev', '/payment', '/api/stripe', '/api/dev']
+  const isPublic = publicRoutes.some(route => pathname === route || pathname.startsWith(route + '/'))
+
+  if (!user && !isPublic) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/auth'
+    return NextResponse.redirect(url)
+  }
+
+  if (user && pathname === '/auth') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/dashboard'
+    return NextResponse.redirect(url)
+  }
+
+  if (user && !isPublic) {
+    const serviceSupabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        cookies: {
+          getAll() { return request.cookies.getAll() },
+          setAll() {},
+        },
+      }
+    )
+    const { data: profile } = await serviceSupabase
+      .from('profiles')
+      .select('subscription_status, is_developer')
+      .eq('id', user.id)
+      .single()
+
+    const hasAccess = profile?.subscription_status === 'active' || profile?.is_developer === true
+
+    if (!hasAccess && pathname !== '/payment') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/payment'
+      return NextResponse.redirect(url)
+    }
+  }
 
   return supabaseResponse
 }
