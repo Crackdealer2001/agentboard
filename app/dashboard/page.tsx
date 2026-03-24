@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
 import { Greeting } from "./Greeting";
+import DevBanner from "./DevBanner";
 
 export default async function DashboardPage() {
   const cookieStore = await cookies();
@@ -44,13 +45,15 @@ export default async function DashboardPage() {
   const complete = projects?.filter((p) => p.status === "complete").length || 0;
   const recent = projects?.slice(0, 5) || [];
 
-  const { data: profile } = await serviceSupabase.from("profiles").select("full_name, business_name").eq("id", user.id).single();
+  const { data: profile } = await serviceSupabase.from("profiles").select("full_name, business_name, is_developer").eq("id", user.id).single();
   const name = profile?.full_name || profile?.business_name || user.email?.split("@")[0] || "there";
+  const isDeveloper = profile?.is_developer === true;
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>
       <Sidebar />
       <main style={{ flex: 1, padding: "64px 48px" }}>
+        {isDeveloper && <DevBanner />}
 
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 64, borderBottom: "1px solid var(--border)", paddingBottom: 40 }}>

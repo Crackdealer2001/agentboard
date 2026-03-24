@@ -9,6 +9,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
+  const [isDeveloper, setIsDeveloper] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -17,8 +18,11 @@ export default function Sidebar() {
       const u = data.session?.user;
       if (!u) return;
       setEmail(u.email || "");
-      supabase.from("profiles").select("full_name").eq("id", u.id).single().then(({ data: p }) => {
-        if (mounted && p) setFullName(p.full_name || "");
+      supabase.from("profiles").select("full_name, is_developer").eq("id", u.id).single().then(({ data: p }) => {
+        if (mounted && p) {
+          setFullName(p.full_name || "");
+          setIsDeveloper(p.is_developer === true);
+        }
       });
     });
     return () => { mounted = false; };
@@ -67,11 +71,21 @@ export default function Sidebar() {
         <div style={{ marginBottom: 12 }}>
           {fullName ? (
             <>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: "-0.01em", marginBottom: 2 }}>{fullName}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: "-0.01em" }}>{fullName}</div>
+                {isDeveloper && (
+                  <span style={{ background: "#c8f135", color: "#000", fontSize: 10, fontWeight: 700, padding: "2px 6px", letterSpacing: "0.04em", flexShrink: 0 }}>DEV</span>
+                )}
+              </div>
               <div style={{ fontSize: 11, color: "var(--text4)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: "0.02em" }}>{email}</div>
             </>
           ) : (
-            <div style={{ fontSize: 11, color: "var(--text4)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: "0.02em" }}>{email}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <div style={{ fontSize: 11, color: "var(--text4)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: "0.02em" }}>{email}</div>
+              {isDeveloper && (
+                <span style={{ background: "#c8f135", color: "#000", fontSize: 10, fontWeight: 700, padding: "2px 6px", letterSpacing: "0.04em", flexShrink: 0 }}>DEV</span>
+              )}
+            </div>
           )}
         </div>
         <DarkModeToggle />
