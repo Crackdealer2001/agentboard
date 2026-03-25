@@ -27,9 +27,9 @@ export default function DevPage() {
       }
 
       const { sessionId, label } = data;
-      localStorage.setItem("dev_session", JSON.stringify({ sessionId, label, password }));
+      localStorage.setItem("dev_session", JSON.stringify({ sessionId, label }));
       document.cookie = `dev_session=${sessionId}; path=/; max-age=86400; SameSite=Lax`;
-      window.location.href = "/dev/app";
+      window.location.href = "/dashboard";
     } catch {
       setError("Something went wrong");
       setLoading(false);

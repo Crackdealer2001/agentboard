@@ -9,38 +9,50 @@ export async function DELETE(request: NextRequest) {
     if (!allowed) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
     const body = await request.json();
-    const { projectId } = body;
+    const { projectId, devSessionId } = body;
     if (!projectId || typeof projectId !== "string") {
       return NextResponse.json({ error: "projectId is required" }, { status: 400 });
     }
 
     const cookieStore = await cookies();
-
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { cookies: { getAll() { return cookieStore.getAll(); }, setAll() {} } }
-    );
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    // Verify ownership via anon client (respects RLS)
-    const { data: project } = await supabase
-      .from("scope_projects")
-      .select("id")
-      .eq("id", projectId)
-      .eq("user_id", user.id)
-      .single();
-    if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-    const serviceSupabase = createServerClient(
+    const serviceClient = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
       { cookies: { getAll() { return cookieStore.getAll(); }, setAll() {} } }
     );
 
-    const { error } = await serviceSupabase
+    let userId: string;
+
+    if (devSessionId) {
+      const { data: devSession } = await serviceClient
+        .from("dev_sessions")
+        .select("id, is_active")
+        .eq("id", devSessionId)
+        .eq("is_active", true)
+        .single();
+      if (!devSession) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      userId = devSession.id;
+    } else {
+      const authClient = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        { cookies: { getAll() { return cookieStore.getAll(); }, setAll() {} } }
+      );
+      const { data: { user } } = await authClient.auth.getUser();
+      if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      userId = user.id;
+    }
+
+    // Verify ownership before deleting
+    const { data: project } = await serviceClient
+      .from("scope_projects")
+      .select("id")
+      .eq("id", projectId)
+      .eq("user_id", userId)
+      .single();
+    if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const { error } = await serviceClient
       .from("scope_projects")
       .delete()
       .eq("id", projectId);

@@ -11,24 +11,48 @@ export async function POST(req: NextRequest) {
   try {
     const cookieStore = await cookies();
 
-    const authClient = createServerClient(
+    const serviceClient = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
       { cookies: { getAll() { return cookieStore.getAll(); }, setAll() {} } }
     );
 
-    const { data: { user } } = await authClient.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    // Rate limit: 10 per minute per user
-    const allowed = await rateLimit(`build:${user.id}`, 10, 60);
-    if (!allowed) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
-
     const body = await req.json();
-    const { projectId, answers } = body;
+    const { projectId, answers, devSessionId } = body;
 
     if (!projectId || typeof projectId !== "string") {
       return NextResponse.json({ error: "projectId is required" }, { status: 400 });
+    }
+
+    let userId: string;
+
+    if (devSessionId) {
+      const { data: devSession } = await serviceClient
+        .from("dev_sessions")
+        .select("id, is_active")
+        .eq("id", devSessionId)
+        .eq("is_active", true)
+        .single();
+      if (!devSession) return NextResponse.json({ error: "Invalid dev session" }, { status: 401 });
+
+      const allowed = await rateLimit(`build:dev:${devSession.id}`, 10, 60);
+      if (!allowed) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
+      userId = devSession.id;
+    } else {
+      const authClient = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        { cookies: { getAll() { return cookieStore.getAll(); }, setAll() {} } }
+      );
+
+      const { data: { user } } = await authClient.auth.getUser();
+      if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+      const allowed = await rateLimit(`build:${user.id}`, 10, 60);
+      if (!allowed) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
+      userId = user.id;
     }
 
     // Sanitize answers (each capped at 2000 chars)
@@ -41,17 +65,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      { cookies: { getAll() { return cookieStore.getAll(); }, setAll() {} } }
-    );
-
-    const { data: project } = await supabase
+    const { data: project } = await serviceClient
       .from("scope_projects")
       .select("*")
       .eq("id", projectId)
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .single();
     if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
@@ -123,7 +141,7 @@ Respond with ONLY a valid JSON object (no markdown, no code blocks) with these e
       result = JSON.parse(match[0]);
     }
 
-    const { error: updateError } = await supabase.from("scope_projects").update({
+    const { error: updateError } = await serviceClient.from("scope_projects").update({
       scope: result.scope,
       proposal: result.proposal,
       proposal_email: result.proposal_email,

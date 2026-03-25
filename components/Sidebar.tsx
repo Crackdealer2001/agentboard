@@ -4,24 +4,38 @@ import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import DarkModeToggle from "./DarkModeToggle";
 
+interface DevSession {
+  sessionId: string;
+  label: string;
+}
+
 export default function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
+  const [devSession, setDevSession] = useState<DevSession | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
-    let mounted = true;
+    try {
+      const stored = localStorage.getItem("dev_session");
+      if (stored) {
+        const parsed = JSON.parse(stored) as DevSession;
+        if (parsed.sessionId && parsed.label) setDevSession(parsed);
+      }
+    } catch { /* ignore */ }
+
     supabase.auth.getSession().then(({ data }) => {
-      if (!mounted) return;
       const u = data.session?.user;
-      if (!u) return;
-      setEmail(u.email || "");
-      supabase.from("profiles").select("full_name").eq("id", u.id).single().then(({ data: p }) => {
-        if (mounted && p) setFullName(p.full_name || "");
-      });
+      setEmail(u?.email || "");
+      if (u) {
+        supabase.from("profiles").select("full_name").eq("id", u.id).single().then(({ data: p }) => {
+          setFullName(p?.full_name || "");
+        });
+      }
+      setAuthChecked(true);
     });
-    return () => { mounted = false; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function signOut() {
@@ -29,7 +43,16 @@ export default function Sidebar() {
     router.replace("/");
   }
 
-  const isDevAccount = email.endsWith("@scopeapp.internal");
+  function exitDevMode() {
+    localStorage.removeItem("dev_session");
+    document.cookie = "dev_session=; path=/; max-age=0";
+    window.location.href = "/";
+  }
+
+  // Password-only dev users have no Supabase auth session — email stays empty
+  const showDevMode = authChecked && devSession !== null && email === "";
+  // @scopeapp.internal accounts are real Supabase users with a special email domain
+  const isDevAccount = authChecked && email.endsWith("@scopeapp.internal");
 
   const nav = [
     { label: "Dashboard", href: "/dashboard" },
@@ -66,24 +89,42 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div style={{ padding: "20px 24px", borderTop: "1px solid var(--border)" }}>
-        <div style={{ marginBottom: 12 }}>
-          {isDevAccount && (
-            <span style={{ background: "#c8f135", color: "#000", fontSize: 9, fontWeight: 700, padding: "2px 6px", letterSpacing: "0.08em", display: "inline-block", marginBottom: 6 }}>DEV</span>
-          )}
-          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: "-0.01em" }}>
-            {fullName}
+      {showDevMode ? (
+        <div style={{ padding: "20px 24px", borderTop: "1px solid var(--border)" }}>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+              <span style={{ background: "#c8f135", color: "#000", fontSize: 9, fontWeight: 700, padding: "2px 6px", letterSpacing: "0.08em" }}>DEV MODE</span>
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", letterSpacing: "-0.01em" }}>{devSession!.label}</div>
           </div>
-          <div style={{ fontSize: 11, color: "var(--text4)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: "0.02em" }}>{email}</div>
+          <DarkModeToggle />
+          <button
+            onClick={exitDevMode}
+            style={{ background: "none", border: "1px solid var(--border)", padding: "8px 14px", fontSize: 13, color: "var(--text3)", cursor: "pointer", width: "100%", marginTop: 8, fontWeight: 500, letterSpacing: "0.01em" }}
+          >
+            Exit dev mode
+          </button>
         </div>
-        <DarkModeToggle />
-        <button
-          onClick={signOut}
-          style={{ background: "none", border: "1px solid var(--border)", padding: "8px 14px", fontSize: 13, color: "var(--text3)", cursor: "pointer", width: "100%", marginTop: 8, fontWeight: 500, letterSpacing: "0.01em" }}
-        >
-          Sign out
-        </button>
-      </div>
+      ) : (
+        <div style={{ padding: "20px 24px", borderTop: "1px solid var(--border)" }}>
+          <div style={{ marginBottom: 12 }}>
+            {isDevAccount && (
+              <span style={{ background: "#c8f135", color: "#000", fontSize: 9, fontWeight: 700, padding: "2px 6px", letterSpacing: "0.08em", display: "inline-block", marginBottom: 6 }}>DEV</span>
+            )}
+            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: "-0.01em" }}>
+              {fullName}
+            </div>
+            <div style={{ fontSize: 11, color: "var(--text4)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: "0.02em" }}>{email}</div>
+          </div>
+          <DarkModeToggle />
+          <button
+            onClick={signOut}
+            style={{ background: "none", border: "1px solid var(--border)", padding: "8px 14px", fontSize: 13, color: "var(--text3)", cursor: "pointer", width: "100%", marginTop: 8, fontWeight: 500, letterSpacing: "0.01em" }}
+          >
+            Sign out
+          </button>
+        </div>
+      )}
     </aside>
   );
 }

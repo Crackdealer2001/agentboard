@@ -1,52 +1,83 @@
 import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
 import { Greeting } from "./Greeting";
 
+type Project = { id: string; title: string; status: string; created_at: string };
 
 export default async function DashboardPage() {
   const cookieStore = await cookies();
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() { return cookieStore.getAll(); },
-        setAll() {},
-      },
+  let name = "there";
+  let isDevAccount = false;
+  let projects: Project[] = [];
+
+  const devSessionCookieId = cookieStore.get("dev_session")?.value;
+
+  if (devSessionCookieId) {
+    const adminClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    const { data: devSession } = await adminClient
+      .from("dev_sessions")
+      .select("id, label, is_active")
+      .eq("id", devSessionCookieId)
+      .eq("is_active", true)
+      .single();
+
+    if (devSession) {
+      name = devSession.label;
+      isDevAccount = true;
+      const { data: devProjects } = await adminClient
+        .from("scope_projects")
+        .select("id, title, status, created_at")
+        .eq("user_id", devSession.id)
+        .order("created_at", { ascending: false });
+      projects = devProjects ?? [];
     }
-  );
+  }
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  if (!isDevAccount) {
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { cookies: { getAll() { return cookieStore.getAll(); }, setAll() {} } }
+    );
 
-  const serviceSupabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      cookies: {
-        getAll() { return cookieStore.getAll(); },
-        setAll() {},
-      },
-    }
-  );
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
 
-  const { data: projects } = await serviceSupabase
-    .from("scope_projects")
-    .select("id, title, status, created_at")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+    isDevAccount = user.email?.endsWith("@scopeapp.internal") === true;
 
-  const total = projects?.length || 0;
-  const drafts = projects?.filter((p) => p.status === "draft").length || 0;
-  const complete = projects?.filter((p) => p.status === "complete").length || 0;
-  const recent = projects?.slice(0, 5) || [];
+    const serviceClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 
-  const { data: profile } = await serviceSupabase.from("profiles").select("full_name, business_name").eq("id", user.id).single();
-  const name = profile?.full_name || profile?.business_name || user.email?.split("@")[0] || "there";
-  const isDevAccount = user.email?.endsWith("@scopeapp.internal") === true;
+    const [{ data: userProjects }, { data: profile }] = await Promise.all([
+      serviceClient
+        .from("scope_projects")
+        .select("id, title, status, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false }),
+      serviceClient
+        .from("profiles")
+        .select("full_name, business_name")
+        .eq("id", user.id)
+        .single(),
+    ]);
+
+    projects = userProjects ?? [];
+    name = profile?.full_name || profile?.business_name || user.email?.split("@")[0] || "there";
+  }
+
+  const total = projects.length;
+  const drafts = projects.filter((p) => p.status === "draft").length;
+  const complete = projects.filter((p) => p.status === "complete").length;
+  const recent = projects.slice(0, 5);
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>
@@ -55,7 +86,7 @@ export default async function DashboardPage() {
 
         {isDevAccount && (
           <div style={{ display: "flex", alignItems: "center", background: "#0a1a00", border: "1px solid rgba(200,241,53,0.2)", padding: "10px 16px", marginBottom: 32 }}>
-            <span style={{ fontSize: 13, color: "#c8f135", fontWeight: 600 }}>DEV MODE — {user.email}</span>
+            <span style={{ fontSize: 13, color: "#c8f135", fontWeight: 600 }}>DEV MODE — {name}</span>
           </div>
         )}
 

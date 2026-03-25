@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 
-function DeleteModal({ projectId, onClose }: { projectId: string; onClose: () => void }) {
+function DeleteModal({ projectId, devSessionId, onClose }: { projectId: string; devSessionId?: string | null; onClose: () => void }) {
   const router = useRouter();
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
@@ -15,10 +15,12 @@ function DeleteModal({ projectId, onClose }: { projectId: string; onClose: () =>
     setLoading(true);
     setError("");
     try {
+      const body: Record<string, string> = { projectId };
+      if (devSessionId) body.devSessionId = devSessionId;
       const res = await fetch("/api/scope/delete", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         const d = await res.json();
@@ -154,16 +156,35 @@ export default function ScopeProjectPage() {
   const [enquiryExpanded, setEnquiryExpanded] = useState(false);
   const [expandedPhases, setExpandedPhases] = useState<Record<number, boolean>>({});
   const [scopeVisible, setScopeVisible] = useState(false);
+  const [devSessionId, setDevSessionId] = useState<string | null>(null);
 
   useEffect(() => {
+    let devSessId: string | null = null;
+    try {
+      const stored = localStorage.getItem("dev_session");
+      if (stored) {
+        const parsed = JSON.parse(stored) as { sessionId?: string };
+        devSessId = parsed.sessionId ?? null;
+        if (devSessId) setDevSessionId(devSessId);
+      }
+    } catch { /* ignore */ }
+
+    if (devSessId) {
+      loadProject(devSessId);
+      return;
+    }
+
     supabase.auth.getSession().then(({ data }) => {
       if (!data.session) { router.replace("/auth"); return; }
+      loadProject(null);
     });
-    loadProject();
   }, [params.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function loadProject() {
-    const res = await fetch(`/api/scope/save?id=${params.id}`);
+  async function loadProject(devSessId: string | null) {
+    const url = devSessId
+      ? `/api/scope/save?id=${params.id}&devSessionId=${devSessId}`
+      : `/api/scope/save?id=${params.id}`;
+    const res = await fetch(url);
     if (!res.ok) { setLoading(false); return; }
     const data = await res.json();
     setProject(data);
@@ -176,21 +197,27 @@ export default function ScopeProjectPage() {
   async function saveTitle() {
     if (!project) return;
     setEditTitle(false);
-    await fetch("/api/scope/save", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId: project.id, title }) });
+    const body: Record<string, unknown> = { projectId: project.id, title };
+    if (devSessionId) body.devSessionId = devSessionId;
+    await fetch("/api/scope/save", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   }
 
   async function saveAnswer(index: number, value: string) {
     if (!project) return;
     const newAnswers = { ...answers, [index]: value };
     setAnswers(newAnswers);
-    await fetch("/api/scope/save", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId: project.id, clarification_answers: newAnswers }) });
+    const body: Record<string, unknown> = { projectId: project.id, clarification_answers: newAnswers };
+    if (devSessionId) body.devSessionId = devSessionId;
+    await fetch("/api/scope/save", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   }
 
   async function buildScope() {
     if (!project) return;
     setBuilding(true); setError("");
     try {
-      const res = await fetch("/api/scope/build", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId: project.id, answers }) });
+      const buildBody: Record<string, unknown> = { projectId: project.id, answers };
+      if (devSessionId) buildBody.devSessionId = devSessionId;
+      const res = await fetch("/api/scope/build", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(buildBody) });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || "Failed to build scope"); }
       const data = await res.json();
       console.log("buildScope response:", data);
@@ -221,7 +248,7 @@ export default function ScopeProjectPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
-      {showDelete && <DeleteModal projectId={project.id} onClose={() => setShowDelete(false)} />}
+      {showDelete && <DeleteModal projectId={project.id} devSessionId={devSessionId} onClose={() => setShowDelete(false)} />}
       <style>{`
         @media (max-width: 640px) {
           .scope-body { padding: 24px !important; }

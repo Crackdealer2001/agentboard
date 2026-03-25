@@ -40,6 +40,12 @@ export default async function ScopePage() {
       .single();
 
     if (devSession) {
+      const { data: devProjects } = await serviceSupabase
+        .from("scope_projects")
+        .select("id, title, status, created_at, original_enquiry")
+        .eq("user_id", devSession.id)
+        .order("created_at", { ascending: false });
+
       return (
         <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>
           <Sidebar />
@@ -54,7 +60,7 @@ export default async function ScopePage() {
                 New project →
               </Link>
             </div>
-            <ProjectsClient initialProjects={[]} />
+            <ProjectsClient initialProjects={devProjects ?? []} />
           </main>
         </div>
       );
