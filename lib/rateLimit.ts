@@ -1,5 +1,8 @@
 import { NextRequest } from 'next/server'
 
+// NOTE: For production scale, configure UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN
+// env vars to use distributed Redis rate limiting. Without these, the in-memory fallback
+// is per-serverless-instance and may not enforce limits reliably across concurrent invocations.
 const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL
 const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN
 

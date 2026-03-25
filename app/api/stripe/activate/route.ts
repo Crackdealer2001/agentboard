@@ -1,11 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStripe } from '@/lib/stripe'
 import { createClient } from '@supabase/supabase-js'
+import { rateLimit } from '@/lib/rateLimit'
 
 export async function POST(req: NextRequest) {
   try {
     const { session_id } = await req.json()
-    if (!session_id) return NextResponse.json({ error: 'No session id' }, { status: 400 })
+
+    // Validate session_id format
+    if (!session_id || !session_id.startsWith('cs_')) {
+      return NextResponse.json({ error: 'Invalid session' }, { status: 400 })
+    }
+
+    // Rate limit - 10 requests per minute per IP
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+    const allowed = await rateLimit(`activate:${ip}`, 10, 60)
+    if (!allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
 
     const stripe = getStripe()
 

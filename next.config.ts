@@ -13,7 +13,7 @@ const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://localhost:3000'
 
 const nextConfig: NextConfig = {
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   async headers() {
     return [
