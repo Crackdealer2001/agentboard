@@ -68,7 +68,16 @@ export default function PaymentPage() {
       justifyContent: "center",
       padding: "24px",
       fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      position: "relative",
     }}>
+      <style>{`.payment-back:hover { color: #fff !important; }`}</style>
+      <a href="/" className="payment-back" style={{
+        position: "absolute", top: 24, left: 24,
+        fontSize: 13, color: "rgba(255,255,255,0.4)",
+        textDecoration: "none", fontWeight: 500,
+      }}>
+        ← Back
+      </a>
       <div style={{ width: "100%", maxWidth: 480, textAlign: "center" }}>
 
         {/* Auth info bar */}

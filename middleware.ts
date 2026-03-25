@@ -82,7 +82,10 @@ export async function middleware(request: NextRequest) {
 
     const hasAccess = profile?.subscription_status === 'active'
 
-    if (!hasAccess && pathname !== '/payment') {
+    const paymentRoutes = ['/payment', '/payment/success', '/payment/cancelled']
+    const isPaymentRoute = paymentRoutes.some(r => pathname === r || pathname.startsWith(r + '/'))
+
+    if (!hasAccess && !isPaymentRoute) {
       const url = request.nextUrl.clone()
       url.pathname = '/payment'
       return NextResponse.redirect(url)

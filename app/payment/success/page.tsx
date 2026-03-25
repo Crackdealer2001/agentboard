@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 
 const POLL_INTERVAL_MS = 2000;
@@ -8,30 +8,41 @@ const POLL_TIMEOUT_MS = 30000;
 export default function PaymentSuccessPage() {
   const [status, setStatus] = useState<"polling" | "active" | "timeout">("polling");
   const [elapsed, setElapsed] = useState(0);
+  const [checking, setChecking] = useState(false);
+
+  const checkOnce = useCallback(async (): Promise<boolean> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return false;
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("subscription_status")
+      .eq("id", user.id)
+      .single();
+    return profile?.subscription_status === "active";
+  }, []);
 
   useEffect(() => {
     let stopped = false;
     const start = Date.now();
 
+    async function init() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        window.location.href = "/auth";
+        return;
+      }
+      poll();
+    }
+
     async function poll() {
       if (stopped) return;
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        // No session yet — keep waiting
-      } else {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("subscription_status")
-          .eq("id", user.id)
-          .single();
-
-        if (profile?.subscription_status === "active") {
-          stopped = true;
-          setStatus("active");
-          setTimeout(() => { window.location.href = "/dashboard"; }, 800);
-          return;
-        }
+      const active = await checkOnce();
+      if (active) {
+        stopped = true;
+        setStatus("active");
+        setTimeout(() => { window.location.href = "/dashboard"; }, 800);
+        return;
       }
 
       const now = Date.now();
@@ -46,9 +57,19 @@ export default function PaymentSuccessPage() {
       setTimeout(poll, POLL_INTERVAL_MS);
     }
 
-    poll();
+    init();
     return () => { stopped = true; };
-  }, []);
+  }, [checkOnce]);
+
+  async function handleRefresh() {
+    setChecking(true);
+    const active = await checkOnce();
+    if (active) {
+      setStatus("active");
+      setTimeout(() => { window.location.href = "/dashboard"; }, 800);
+    }
+    setChecking(false);
+  }
 
   return (
     <div style={{
@@ -77,9 +98,9 @@ export default function PaymentSuccessPage() {
         @keyframes spin {
           to { transform: rotate(360deg); }
         }
+        .refresh-btn:hover { color: #fff !important; }
       `}</style>
 
-      {/* Confetti — only show once active */}
       {status === "active" && CONFETTI.map((c, i) => (
         <div
           key={i}
@@ -108,7 +129,7 @@ export default function PaymentSuccessPage() {
             <h1 style={{ fontSize: 32, fontWeight: 800, color: "#fff", letterSpacing: "-0.03em", margin: "0 0 12px" }}>
               Activating your subscription...
             </h1>
-            <p style={{ fontSize: 15, color: "rgba(255,255,255,0.35)", margin: 0, lineHeight: 1.6 }}>
+            <p style={{ fontSize: 15, color: "rgba(255,255,255,0.35)", margin: "0 0 24px", lineHeight: 1.6 }}>
               Your payment was received. Confirming with Stripe
               {elapsed > 0 ? ` (${elapsed}s)` : "…"}
             </p>
@@ -158,6 +179,19 @@ export default function PaymentSuccessPage() {
             }}>
               Go to dashboard →
             </a>
+            <div style={{ marginTop: 16 }}>
+              <button
+                onClick={handleRefresh}
+                disabled={checking}
+                className="refresh-btn"
+                style={{
+                  background: "none", border: "none", cursor: checking ? "not-allowed" : "pointer",
+                  fontSize: 13, color: "rgba(255,255,255,0.3)", fontWeight: 500, padding: 0,
+                }}
+              >
+                {checking ? "Checking..." : "Refresh status"}
+              </button>
+            </div>
           </>
         )}
 
