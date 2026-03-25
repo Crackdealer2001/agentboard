@@ -81,8 +81,7 @@ export default function SettingsPage() {
     supabase.auth.getSession().then(({ data }) => {
       if (!mounted) return;
       const u = data.session?.user ?? null;
-      if (!u && localStorage.getItem("dev_mode") !== "true") { router.replace("/auth"); return; }
-      if (!u) return;
+      if (!u) { router.replace("/auth"); return; }
       setUserId(u.id);
       setEmail(u.email || "");
 
