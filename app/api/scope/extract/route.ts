@@ -63,6 +63,17 @@ export async function POST(req: NextRequest) {
       if (!allowed) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
       userId = user.id;
+
+      // Ensure profile exists before inserting project
+      const { data: profile } = await supabase.from('profiles').select('id').eq('id', user.id).single()
+      if (!profile) {
+        await supabase.from('profiles').insert({
+          id: user.id,
+          full_name: user.user_metadata?.full_name || '',
+          subscription_status: 'inactive',
+          updated_at: new Date().toISOString(),
+        })
+      }
     }
 
     const { data: project, error: insertError } = await supabase

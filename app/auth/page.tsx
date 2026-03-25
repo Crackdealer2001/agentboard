@@ -32,6 +32,7 @@ function AuthForm() {
           });
         }
         if (data.session) {
+          await fetch('/api/auth/create-profile', { method: 'POST' });
           window.location.href = "/dashboard";
         } else {
           setSuccess("Check your email to confirm your account.");
@@ -40,6 +41,7 @@ function AuthForm() {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         if (data.session) {
+          await fetch('/api/auth/create-profile', { method: 'POST' });
           const redirect = searchParams.get("redirect") || "/dashboard";
           window.location.href = redirect;
         }
