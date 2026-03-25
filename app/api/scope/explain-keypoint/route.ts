@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import Anthropic from "@anthropic-ai/sdk";
 import { rateLimit, getIp } from "@/lib/rateLimit";
@@ -12,17 +13,33 @@ export async function POST(req: NextRequest) {
     const allowed = await rateLimit(`explain:${getIp(req)}`, 30, 60);
     if (!allowed) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
-    const cookieStore = await cookies();
-    const authClient = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { cookies: { getAll() { return cookieStore.getAll(); }, setAll() {} } }
-    );
-    const { data: { user } } = await authClient.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
     const body = await req.json();
-    const { selectedText, projectId } = body;
+    const { selectedText, projectId, devSessionId } = body;
+
+    // Dev session path
+    if (devSessionId) {
+      const adminClient = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+      const { data: devSession } = await adminClient
+        .from("dev_sessions")
+        .select("id, is_active")
+        .eq("id", devSessionId)
+        .eq("is_active", true)
+        .single();
+      if (!devSession) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      // Dev session valid — fall through to AI call below
+    } else {
+      const cookieStore = await cookies();
+      const authClient = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        { cookies: { getAll() { return cookieStore.getAll(); }, setAll() {} } }
+      );
+      const { data: { user } } = await authClient.auth.getUser();
+      if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     if (!selectedText || typeof selectedText !== "string" || !selectedText.trim()) {
       return NextResponse.json({ error: "selectedText is required" }, { status: 400 });

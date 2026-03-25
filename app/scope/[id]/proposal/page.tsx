@@ -70,10 +70,37 @@ export default function ProposalPage() {
   const [format, setFormat] = useState<"formal" | "email">("formal");
   const [exportMode, setExportMode] = useState(false);
   const [selectedSections, setSelectedSections] = useState<Set<SectionId>>(new Set(SECTION_IDS));
+  const [devSessionId, setDevSessionId] = useState<string | null>(null);
 
   useEffect(() => {
     const projectId = params.id;
     if (!projectId) return;
+
+    // Check for dev session first
+    let devSessId: string | null = null;
+    try {
+      const stored = localStorage.getItem("dev_session");
+      if (stored) {
+        const parsed = JSON.parse(stored) as { sessionId?: string; label?: string };
+        if (parsed.sessionId) { devSessId = parsed.sessionId; setDevSessionId(parsed.sessionId); }
+      }
+    } catch { /* ignore */ }
+
+    if (devSessId) {
+      // Dev session: fetch project via API (bypasses RLS)
+      fetch(`/api/scope/save?id=${projectId}&devSessionId=${devSessId}`)
+        .then((r) => r.json())
+        .then((data: Project & { error?: string }) => {
+          if (data.error || !data.id) { setLoading(false); return; }
+          setProject(data);
+          setProposal(data.proposal || "");
+          setProposalEmail(data.proposal_email || "");
+          if (data.key_points && Array.isArray(data.key_points)) setKeyPoints(data.key_points);
+          setLoading(false);
+        })
+        .catch(() => setLoading(false));
+      return;
+    }
 
     supabase.auth.getUser().then(({ data }: { data: { user: { id: string } | null } }) => {
       if (!data.user) { router.push("/auth"); return; }
@@ -93,13 +120,8 @@ export default function ProposalPage() {
       .eq("id", projectId)
       .single()
       .then(({ data, error }: { data: Project | null; error: unknown }) => {
-        console.log("Proposal page fetch - error:", error, "data:", data);
         if (error || !data) { setLoading(false); return; }
-        console.log("Proposal:", data.proposal);
-        console.log("Proposal email:", data.proposal_email);
-        console.log("Scope:", data.scope);
         setProject(data);
-        // Replace [Freelancer] placeholder with the user's name — done lazily after profileName loads
         setProposal(data.proposal || "");
         setProposalEmail(data.proposal_email || "");
         if (data.key_points && Array.isArray(data.key_points)) {
@@ -153,12 +175,12 @@ export default function ProposalPage() {
     const updated = [...keyPoints, newKeyPoint];
     setKeyPoints(updated);
     try {
-      const res = await fetch("/api/scope/explain-keypoint", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ selectedText: text, projectId: project.id }) });
+      const res = await fetch("/api/scope/explain-keypoint", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ selectedText: text, projectId: project.id, ...(devSessionId && { devSessionId }) }) });
       const data = await res.json();
       const explanation = data.explanation || "No explanation available.";
       const finalKeyPoints = updated.map((kp) => kp.id === id ? { ...kp, explanation, loading: false } : kp);
       setKeyPoints(finalKeyPoints);
-      await fetch("/api/scope/save", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId: project.id, key_points: finalKeyPoints.map(({ id, text, explanation, sectionName }) => ({ id, text, explanation, sectionName })) }) });
+      await fetch("/api/scope/save", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId: project.id, key_points: finalKeyPoints.map(({ id, text, explanation, sectionName }) => ({ id, text, explanation, sectionName })), ...(devSessionId && { devSessionId }) }) });
     } catch {
       setKeyPoints((prev) => prev.map((kp) => kp.id === id ? { ...kp, explanation: "Failed to load explanation.", loading: false } : kp));
     }
@@ -168,17 +190,17 @@ export default function ProposalPage() {
     if (!project) return;
     const updated = keyPoints.filter((kp) => kp.id !== id);
     setKeyPoints(updated);
-    await fetch("/api/scope/save", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId: project.id, key_points: updated.map(({ id, text, explanation, sectionName }) => ({ id, text, explanation, sectionName })) }) });
+    await fetch("/api/scope/save", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId: project.id, key_points: updated.map(({ id, text, explanation, sectionName }) => ({ id, text, explanation, sectionName })), ...(devSessionId && { devSessionId }) }) });
   }
 
   async function saveProposal() {
     if (!project) return;
-    await fetch("/api/scope/save", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId: project.id, proposal }) });
+    await fetch("/api/scope/save", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId: project.id, proposal, ...(devSessionId && { devSessionId }) }) });
   }
 
   async function saveProposalEmail(value: string) {
     if (!project) return;
-    await fetch("/api/scope/save", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId: project.id, proposal_email: value }) });
+    await fetch("/api/scope/save", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId: project.id, proposal_email: value, ...(devSessionId && { devSessionId }) }) });
   }
 
   async function copyText() {
