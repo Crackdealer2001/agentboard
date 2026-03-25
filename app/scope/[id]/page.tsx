@@ -157,6 +157,7 @@ export default function ScopeProjectPage() {
   const [expandedPhases, setExpandedPhases] = useState<Record<number, boolean>>({});
   const [scopeVisible, setScopeVisible] = useState(false);
   const [devSessionId, setDevSessionId] = useState<string | null>(null);
+  const [buildLimitError, setBuildLimitError] = useState(false);
 
   useEffect(() => {
     let devSessId: string | null = null;
@@ -213,12 +214,15 @@ export default function ScopeProjectPage() {
 
   async function buildScope() {
     if (!project) return;
-    setBuilding(true); setError("");
+    setBuilding(true); setError(""); setBuildLimitError(false);
     try {
       const buildBody: Record<string, unknown> = { projectId: project.id, answers };
       if (devSessionId) buildBody.devSessionId = devSessionId;
       const res = await fetch("/api/scope/build", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(buildBody) });
-      if (!res.ok) { const d = await res.json(); throw new Error(d.error || "Failed to build scope"); }
+      if (!res.ok) {
+        if (res.status === 429) { setBuildLimitError(true); return; }
+        const d = await res.json(); throw new Error(d.error || "Failed to build scope");
+      }
       const data = await res.json();
       console.log("buildScope response:", data);
       setProject((prev) => prev ? { ...prev, ...data, status: "complete" } : prev);
@@ -431,6 +435,19 @@ export default function ScopeProjectPage() {
                 />
               </div>
             ))}
+            {buildLimitError && (
+              <div style={{ border: "1px solid #f59e0b", padding: "20px 24px", marginTop: 16, background: "rgba(245,158,11,0.06)" }}>
+                <p style={{ fontSize: 14, fontWeight: 700, color: "#f59e0b", margin: "0 0 6px" }}>
+                  You&rsquo;ve reached your monthly limit for scope builds (40/40)
+                </p>
+                <p style={{ fontSize: 13, color: "#92400e", margin: "0 0 6px" }}>
+                  Your usage resets on the 1st of {(() => { const d = new Date(); d.setMonth(d.getMonth() + 1, 1); return d.toLocaleDateString("en-GB", { month: "long", year: "numeric" }); })()}
+                </p>
+                <p style={{ fontSize: 13, color: "#92400e", margin: 0 }}>
+                  Need more? <a href="mailto:support@scopeapp.io" style={{ color: "#f59e0b", fontWeight: 600 }}>Contact support.</a>
+                </p>
+              </div>
+            )}
             {error && (
               <div style={{ border: "1px solid var(--err-bdr)", padding: "12px 16px", fontSize: 14, color: "var(--err-text)", marginTop: 16, background: "var(--err-bg)" }}>{error}</div>
             )}

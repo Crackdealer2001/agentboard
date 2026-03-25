@@ -9,6 +9,8 @@ interface DevSession {
   label: string;
 }
 
+const BUILD_LIMIT = 40;
+
 export default function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
@@ -16,6 +18,7 @@ export default function Sidebar() {
   const [fullName, setFullName] = useState("");
   const [devSession, setDevSession] = useState<DevSession | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
+  const [buildCount, setBuildCount] = useState<number | null>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -42,6 +45,21 @@ export default function Sidebar() {
       }
 
       setAuthChecked(true);
+
+      // Fetch build usage count for sidebar indicator
+      try {
+        const devStored = localStorage.getItem("dev_session");
+        let devId: string | null = null;
+        if (devStored) {
+          const p = JSON.parse(devStored) as { sessionId?: string };
+          devId = p.sessionId ?? null;
+        }
+        const url = devId ? `/api/usage?devSessionId=${devId}` : "/api/usage";
+        fetch(url)
+          .then((r) => r.json())
+          .then((d: { build?: number }) => { if (typeof d.build === "number") setBuildCount(d.build); })
+          .catch(() => {});
+      } catch { /* ignore */ }
     };
     init();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -66,6 +84,7 @@ export default function Sidebar() {
     { label: "Dashboard", href: "/dashboard" },
     { label: "Projects", href: "/scope" },
     { label: "Settings", href: "/settings" },
+    { label: "Usage", href: "/usage" },
   ];
 
   return (
@@ -95,6 +114,11 @@ export default function Sidebar() {
             </a>
           );
         })}
+        {buildCount !== null && (
+          <div style={{ padding: "4px 24px 8px", fontSize: 11, fontWeight: 500, color: buildCount >= BUILD_LIMIT ? "#ef4444" : buildCount >= BUILD_LIMIT * 0.8 ? "#f59e0b" : "var(--text4)" }}>
+            Scopes: {buildCount} / {BUILD_LIMIT}
+          </div>
+        )}
       </nav>
 
       {showDevMode ? (

@@ -67,6 +67,21 @@ export async function POST(req: NextRequest) {
       }
 
       userId = devSession.id;
+
+      // Monthly usage check (dev sessions also have limits)
+      const now = new Date();
+      monthKey = `${now.getFullYear()}-${now.getMonth() + 1}`;
+      const { data: devUsageData } = await supabase
+        .from("api_usage")
+        .select("count")
+        .eq("user_id", userId)
+        .eq("action", "extract")
+        .eq("month", monthKey)
+        .single();
+      usageCount = devUsageData?.count || 0;
+      if (usageCount >= 80) {
+        return NextResponse.json({ error: `Monthly limit reached (80 uses). Resets on the 1st of next month.` }, { status: 429 });
+      }
     } else {
       // Normal auth path
       const authClient = createServerClient(
@@ -94,8 +109,8 @@ export async function POST(req: NextRequest) {
         .eq("month", monthKey)
         .single();
       usageCount = usageData?.count || 0;
-      if (usageCount >= 100) {
-        return NextResponse.json({ error: "Monthly limit reached. Your limit resets on the 1st of next month." }, { status: 429 });
+      if (usageCount >= 80) {
+        return NextResponse.json({ error: `Monthly limit reached (80 uses). Resets on the 1st of next month.` }, { status: 429 });
       }
 
       // Ensure profile exists before inserting project
@@ -170,8 +185,8 @@ Respond with ONLY a valid JSON object (no markdown, no code blocks) with these e
       updated_at: new Date().toISOString(),
     }).eq("id", project.id);
 
-    // Increment monthly usage (skip for dev sessions)
-    if (!devSessionId && monthKey) {
+    // Increment monthly usage
+    if (monthKey) {
       await supabase.from("api_usage").upsert({
         user_id: userId,
         action: "extract",

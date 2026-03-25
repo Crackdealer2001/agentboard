@@ -33,7 +33,23 @@ export async function POST(req: NextRequest) {
         .eq("is_active", true)
         .single();
       if (!devSession) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      // Dev session valid — skip usage limits, fall through to AI call below
+
+      userId = devSession.id;
+
+      // Monthly usage check (dev sessions also have limits)
+      const now = new Date();
+      monthKey = `${now.getFullYear()}-${now.getMonth() + 1}`;
+      const { data: devUsageData } = await adminClient
+        .from("api_usage")
+        .select("count")
+        .eq("user_id", userId)
+        .eq("action", "explain")
+        .eq("month", monthKey)
+        .single();
+      usageCount = devUsageData?.count || 0;
+      if (usageCount >= 150) {
+        return NextResponse.json({ error: `Monthly limit reached (150 uses). Resets on the 1st of next month.` }, { status: 429 });
+      }
     } else {
       const cookieStore = await cookies();
       const authClient = createServerClient(
@@ -61,8 +77,8 @@ export async function POST(req: NextRequest) {
         .eq("month", monthKey)
         .single();
       usageCount = usageData?.count || 0;
-      if (usageCount >= 200) {
-        return NextResponse.json({ error: "Monthly limit reached. Your limit resets on the 1st of next month." }, { status: 429 });
+      if (usageCount >= 150) {
+        return NextResponse.json({ error: `Monthly limit reached (150 uses). Resets on the 1st of next month.` }, { status: 429 });
       }
     }
 
@@ -91,13 +107,13 @@ In 2-3 sentences, explain why this specific point matters for the freelancer —
     const content = message.content[0];
     if (content.type !== "text") throw new Error("Unexpected response");
 
-    // Increment monthly usage (skip for dev sessions)
-    if (!devSessionId && userId && monthKey) {
-      const serviceClient = createClient(
+    // Increment monthly usage (for all users including dev sessions)
+    if (userId && monthKey) {
+      const usageClient = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!
       );
-      await serviceClient.from("api_usage").upsert({
+      await usageClient.from("api_usage").upsert({
         user_id: userId,
         action: "explain",
         month: monthKey,

@@ -8,6 +8,7 @@ export default function NewScopePage() {
   const [enquiry, setEnquiry] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [limitError, setLimitError] = useState(false);
   const [focused, setFocused] = useState(false);
   const [devSessionId, setDevSessionId] = useState<string | null>(null);
 
@@ -24,7 +25,7 @@ export default function NewScopePage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!enquiry.trim()) return;
-    setLoading(true); setError("");
+    setLoading(true); setError(""); setLimitError(false);
     try {
       const body: Record<string, string> = { enquiry: enquiry.trim() };
       if (devSessionId) body.devSessionId = devSessionId;
@@ -36,6 +37,7 @@ export default function NewScopePage() {
       });
       if (!res.ok) {
         const d = await res.json();
+        if (res.status === 429) { setLimitError(true); setLoading(false); return; }
         throw new Error(d.error || "Failed to analyse enquiry");
       }
       const { projectId } = await res.json();
@@ -63,7 +65,20 @@ export default function NewScopePage() {
             Drop in the email, message, or brief exactly as received. No formatting needed.
           </p>
 
-          {error && (
+          {limitError && (
+            <div style={{ border: "1px solid #f59e0b", padding: "20px 24px", marginBottom: 24, background: "rgba(245,158,11,0.06)" }}>
+              <p style={{ fontSize: 14, fontWeight: 700, color: "#f59e0b", margin: "0 0 6px" }}>
+                You&rsquo;ve reached your monthly limit for enquiry analysis (80/80)
+              </p>
+              <p style={{ fontSize: 13, color: "#92400e", margin: "0 0 6px" }}>
+                Your usage resets on the 1st of {(() => { const d = new Date(); d.setMonth(d.getMonth() + 1, 1); return d.toLocaleDateString("en-GB", { month: "long", year: "numeric" }); })()}
+              </p>
+              <p style={{ fontSize: 13, color: "#92400e", margin: 0 }}>
+                Need more? <a href="mailto:support@scopeapp.io" style={{ color: "#f59e0b", fontWeight: 600 }}>Contact support.</a>
+              </p>
+            </div>
+          )}
+          {error && !limitError && (
             <div style={{ border: "1px solid #fecaca", padding: "12px 16px", fontSize: 14, color: "#991b1b", marginBottom: 24, background: "#fef2f2" }}>
               {error}
             </div>

@@ -41,6 +41,21 @@ export async function POST(req: NextRequest) {
       if (!allowed) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
       userId = devSession.id;
+
+      // Monthly usage check (dev sessions also have limits)
+      const now = new Date();
+      monthKey = `${now.getFullYear()}-${now.getMonth() + 1}`;
+      const { data: devUsageData } = await serviceClient
+        .from("api_usage")
+        .select("count")
+        .eq("user_id", userId)
+        .eq("action", "build")
+        .eq("month", monthKey)
+        .single();
+      usageCount = devUsageData?.count || 0;
+      if (usageCount >= 40) {
+        return NextResponse.json({ error: `Monthly limit reached (40 uses). Resets on the 1st of next month.` }, { status: 429 });
+      }
     } else {
       const authClient = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -67,8 +82,8 @@ export async function POST(req: NextRequest) {
         .eq("month", monthKey)
         .single();
       usageCount = usageData?.count || 0;
-      if (usageCount >= 50) {
-        return NextResponse.json({ error: "Monthly limit reached. Your limit resets on the 1st of next month." }, { status: 429 });
+      if (usageCount >= 40) {
+        return NextResponse.json({ error: `Monthly limit reached (40 uses). Resets on the 1st of next month.` }, { status: 429 });
       }
     }
 
@@ -172,8 +187,8 @@ Respond with ONLY a valid JSON object (no markdown, no code blocks) with these e
       return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
     }
 
-    // Increment monthly usage (skip for dev sessions)
-    if (!devSessionId && monthKey) {
+    // Increment monthly usage
+    if (monthKey) {
       await serviceClient.from("api_usage").upsert({
         user_id: userId,
         action: "build",
