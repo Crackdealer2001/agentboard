@@ -1,10 +1,17 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function DevPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setPassword("");
+    setError("");
+    localStorage.removeItem("dev_session");
+    document.cookie = "dev_session=; path=/; max-age=0; SameSite=Lax";
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -54,6 +61,7 @@ export default function DevPage() {
             style={inputStyle}
             className="dev-input"
             autoFocus
+            autoComplete="off"
             disabled={loading}
           />
           {error && (
