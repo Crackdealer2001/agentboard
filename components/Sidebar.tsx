@@ -9,11 +9,6 @@ export default function Sidebar() {
   const pathname = usePathname();
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
-  const [isDevMode, setIsDevMode] = useState(false);
-
-  useEffect(() => {
-    setIsDevMode(document.cookie.includes("dev_mode=true"));
-  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -73,13 +68,10 @@ export default function Sidebar() {
       </nav>
       <div style={{ padding: "20px 24px", borderTop: "1px solid var(--border)" }}>
         <div style={{ marginBottom: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+          <div style={{ marginBottom: 2 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: "-0.01em" }}>
               {fullName}
             </div>
-            {isDevMode && (
-              <span style={{ background: "#c8f135", color: "#000", fontSize: 9, fontWeight: 700, padding: "2px 5px", letterSpacing: "0.06em", flexShrink: 0 }}>DEV</span>
-            )}
           </div>
           <div style={{ fontSize: 11, color: "var(--text4)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: "0.02em" }}>{email}</div>
         </div>

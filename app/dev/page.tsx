@@ -12,8 +12,6 @@ export default function DevPage() {
       setError("Incorrect password");
       return;
     }
-    localStorage.setItem("dev_mode", "true");
-    document.cookie = "dev_mode=true; path=/; max-age=86400";
     setSuccess(true);
   }
 
@@ -26,10 +24,10 @@ export default function DevPage() {
           <p style={labelStyle}>DEVELOPER ACCESS</p>
           <h1 style={headingStyle}>Password correct</h1>
           <p style={subtitleStyle}>
-            Developer mode is active. Sign in with any account to access the full app — the payment wall will be bypassed.
+            Sign in with your developer account to continue.
           </p>
           <a href="/auth" style={buttonStyle}>
-            Go to sign in →
+            Sign in to continue →
           </a>
         </div>
       ) : (

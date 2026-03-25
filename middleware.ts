@@ -57,8 +57,7 @@ export async function middleware(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    const devCookie = request.cookies.get('dev_mode')?.value === 'true'
-    const hasAccess = profile?.subscription_status === 'active' || devCookie
+    const hasAccess = profile?.subscription_status === 'active'
 
     if (!hasAccess && pathname !== '/payment') {
       const url = request.nextUrl.clone()

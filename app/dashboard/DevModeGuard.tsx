@@ -1,32 +1,13 @@
 "use client";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
-import DevBanner from "./DevBanner";
 import { Greeting } from "./Greeting";
 
 export default function DevModeGuard() {
-  const router = useRouter();
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    if (localStorage.getItem("dev_mode") === "true") {
-      setReady(true);
-    } else {
-      router.replace("/auth");
-    }
-  }, [router]);
-
-  if (!ready) return null;
-
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>
       <Sidebar />
       <main style={{ flex: 1, padding: "64px 48px" }}>
-        <DevBanner />
-
-        {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 64, borderBottom: "1px solid var(--border)", paddingBottom: 40 }}>
           <div>
             <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text4)", margin: "0 0 12px" }}>Dashboard</p>
@@ -39,7 +20,6 @@ export default function DevModeGuard() {
           </Link>
         </div>
 
-        {/* Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", marginBottom: 64, borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)" }}>
           {[
             { label: "Total projects", value: 0 },
@@ -53,7 +33,6 @@ export default function DevModeGuard() {
           ))}
         </div>
 
-        {/* Recent projects */}
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
             <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text4)", margin: 0 }}>Recent projects</p>
