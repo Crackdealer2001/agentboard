@@ -1,48 +1,45 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { rateLimit, getIp } from '@/lib/rateLimit'
-import crypto from 'crypto'
+import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 
 export async function POST(req: NextRequest) {
-  const ip = getIp(req)
-  const allowed = await rateLimit(`dev-verify:${ip}`, 5, 60)
-  if (!allowed) {
-    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
-  }
-
   try {
-    const body = await req.json()
-    const { password } = body
+    const { password } = await req.json();
 
-    if (!password || typeof password !== 'string') {
-      return NextResponse.json({ error: 'Password is required' }, { status: 400 })
+    if (!password || typeof password !== "string") {
+      return NextResponse.json({ error: "Password required" }, { status: 400 });
     }
 
-    const expected = process.env.DEV_PASSWORD
-    if (!expected) {
-      console.error('DEV_PASSWORD env var is not set')
-      return NextResponse.json({ error: 'Something went wrong' }, { status: 500 })
+    const cookieStore = await cookies();
+    const serviceClient = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        cookies: {
+          getAll() { return cookieStore.getAll(); },
+          setAll() {},
+        },
+      }
+    );
+
+    const { data: session } = await serviceClient
+      .from("dev_sessions")
+      .select("id, label, is_active")
+      .eq("password", password)
+      .eq("is_active", true)
+      .single();
+
+    if (!session) {
+      return NextResponse.json({ error: "Invalid password" }, { status: 401 });
     }
 
-    // Constant-time comparison to prevent timing attacks
-    const passwordBuf = Buffer.from(password)
-    const expectedBuf = Buffer.from(expected)
-    const match =
-      passwordBuf.length === expectedBuf.length &&
-      crypto.timingSafeEqual(passwordBuf, expectedBuf)
+    await serviceClient
+      .from("dev_sessions")
+      .update({ last_used: new Date().toISOString() })
+      .eq("id", session.id);
 
-    if (!match) {
-      return NextResponse.json({ error: 'Incorrect password' }, { status: 401 })
-    }
-
-    // Generate a stable HMAC token derived from the password secret
-    // Token changes if the password changes
-    const token = crypto
-      .createHmac('sha256', expected)
-      .update('dev-access')
-      .digest('hex')
-
-    return NextResponse.json({ token })
+    return NextResponse.json({ success: true, sessionId: session.id, label: session.label });
   } catch {
-    return NextResponse.json({ error: 'Something went wrong' }, { status: 500 })
+    return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
   }
 }

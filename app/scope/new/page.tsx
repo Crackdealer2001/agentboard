@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 
@@ -9,16 +9,30 @@ export default function NewScopePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [focused, setFocused] = useState(false);
+  const [devSessionId, setDevSessionId] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("dev_session");
+      if (stored) {
+        const parsed = JSON.parse(stored) as { sessionId?: string };
+        setDevSessionId(parsed.sessionId ?? null);
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!enquiry.trim()) return;
     setLoading(true); setError("");
     try {
+      const body: Record<string, string> = { enquiry: enquiry.trim() };
+      if (devSessionId) body.devSessionId = devSessionId;
+
       const res = await fetch("/api/scope/extract", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ enquiry: enquiry.trim() }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         const d = await res.json();

@@ -11,21 +11,15 @@ export async function POST(req: NextRequest) {
   try {
     const cookieStore = await cookies();
 
-    const authClient = createServerClient(
+    const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
       { cookies: { getAll() { return cookieStore.getAll(); }, setAll() {} } }
     );
 
-    const { data: { user } } = await authClient.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    // Rate limit: 10 per minute per user
-    const allowed = await rateLimit(`extract:${user.id}`, 10, 60);
-    if (!allowed) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
-
     const body = await req.json();
     const rawEnquiry = body?.enquiry;
+    const devSessionId = body?.devSessionId as string | undefined;
 
     if (!rawEnquiry || typeof rawEnquiry !== "string" || !rawEnquiry.trim()) {
       return NextResponse.json({ error: "enquiry is required" }, { status: 400 });
@@ -34,15 +28,46 @@ export async function POST(req: NextRequest) {
     const enquiry = sanitizeText(rawEnquiry, 10000);
     if (!enquiry) return NextResponse.json({ error: "enquiry cannot be empty" }, { status: 400 });
 
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      { cookies: { getAll() { return cookieStore.getAll(); }, setAll() {} } }
-    );
+    let userId: string;
+
+    if (devSessionId) {
+      // Dev mode: verify session against dev_sessions table
+      const { data: devSession } = await supabase
+        .from("dev_sessions")
+        .select("id, is_active")
+        .eq("id", devSessionId)
+        .eq("is_active", true)
+        .single();
+
+      if (!devSession) {
+        return NextResponse.json({ error: "Invalid dev session" }, { status: 401 });
+      }
+
+      // Rate limit by dev session
+      const allowed = await rateLimit(`extract:dev:${devSession.id}`, 10, 60);
+      if (!allowed) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
+      userId = devSession.id;
+    } else {
+      // Normal auth path
+      const authClient = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        { cookies: { getAll() { return cookieStore.getAll(); }, setAll() {} } }
+      );
+
+      const { data: { user } } = await authClient.auth.getUser();
+      if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+      const allowed = await rateLimit(`extract:${user.id}`, 10, 60);
+      if (!allowed) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
+      userId = user.id;
+    }
 
     const { data: project, error: insertError } = await supabase
       .from("scope_projects")
-      .insert({ user_id: user.id, original_enquiry: enquiry, status: "draft" })
+      .insert({ user_id: userId, original_enquiry: enquiry, status: "draft" })
       .select()
       .single();
 

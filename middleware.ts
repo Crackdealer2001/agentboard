@@ -4,6 +4,29 @@ import { NextResponse, type NextRequest } from 'next/server'
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
+  // Dev session check — must run before user auth so dev users bypass login
+  const devSessionId = request.cookies.get('dev_session')?.value
+  if (devSessionId) {
+    const serviceClient = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        cookies: {
+          getAll() { return request.cookies.getAll() },
+          setAll() {},
+        },
+      }
+    )
+    const { data: devSession } = await serviceClient
+      .from('dev_sessions')
+      .select('id, is_active')
+      .eq('id', devSessionId)
+      .eq('is_active', true)
+      .single()
+
+    if (devSession) return supabaseResponse
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
