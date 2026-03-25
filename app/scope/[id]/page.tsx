@@ -174,8 +174,8 @@ export default function ScopeProjectPage() {
       return;
     }
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) { router.replace("/auth"); return; }
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) { router.replace("/auth"); return; }
       loadProject(null);
     });
   }, [params.id]); // eslint-disable-line react-hooks/exhaustive-deps
