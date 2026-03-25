@@ -6,8 +6,13 @@ export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
   const pathname = request.nextUrl.pathname
 
+  // Never redirect API routes - they handle their own auth
+  if (pathname.startsWith('/api/')) {
+    return supabaseResponse
+  }
+
   // Always allow these routes with no checks
-  const alwaysPublic = ['/_next', '/favicon', '/api/stripe/webhook', '/api/dev', '/api/auth']
+  const alwaysPublic = ['/_next', '/favicon']
   if (alwaysPublic.some(r => pathname.startsWith(r))) return supabaseResponse
 
   const publicRoutes = ['/', '/auth', '/dev', '/payment']
