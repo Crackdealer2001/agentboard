@@ -5,6 +5,7 @@ import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
 import { Greeting } from "./Greeting";
 import { DateDisplay } from "./DateDisplay";
+import PendingAcceptances from "./PendingAcceptances";
 
 type Project = { id: string; title: string; status: string; created_at: string };
 
@@ -82,6 +83,7 @@ export default async function DashboardPage() {
   let name = "there";
   let isDevAccount = false;
   let projects: Project[] = [];
+  let pendingPortals: { project_id: string; project_title: string; portal_sent_at: string; token: string }[] = [];
 
   const devSessionCookieId = cookieStore.get("dev_session")?.value;
 
@@ -134,7 +136,7 @@ export default async function DashboardPage() {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    const [{ data: userProjects }, { data: profile }] = await Promise.all([
+    const [{ data: userProjects }, { data: profile }, { data: pendingPortalRows }] = await Promise.all([
       serviceClient
         .from("scope_projects")
         .select("id, title, status, created_at")
@@ -145,10 +147,27 @@ export default async function DashboardPage() {
         .select("full_name, business_name")
         .eq("id", user.id)
         .single(),
+      serviceClient
+        .from("client_portals")
+        .select("project_id, token, created_at, status")
+        .eq("user_id", user.id)
+        .eq("status", "pending"),
     ]);
 
     projects = userProjects ?? [];
     name = profile?.full_name || profile?.business_name || user.email?.split("@")[0] || "there";
+
+    // Build pending portals with project titles
+    if (pendingPortalRows && pendingPortalRows.length > 0 && userProjects) {
+      const projectTitleMap: Record<string, string> = {};
+      for (const p of userProjects) projectTitleMap[p.id] = p.title || "Untitled project";
+      pendingPortals = pendingPortalRows.map((pr) => ({
+        project_id: pr.project_id,
+        project_title: projectTitleMap[pr.project_id] || "Untitled project",
+        portal_sent_at: pr.created_at,
+        token: pr.token,
+      }));
+    }
   }
 
   // Compute stats
@@ -335,6 +354,13 @@ export default async function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* ── SECTION 3b: Pending acceptances ── */}
+        {pendingPortals.length > 0 && (
+          <div style={{ marginBottom: 24 }}>
+            <PendingAcceptances portals={pendingPortals} />
+          </div>
+        )}
 
         {/* ── SECTION 4: Contribution grid ── */}
         <div style={{ ...CARD, padding: 28 }}>

@@ -158,6 +158,7 @@ export default function ScopeProjectPage() {
   const [scopeVisible, setScopeVisible] = useState(false);
   const [devSessionId, setDevSessionId] = useState<string | null>(null);
   const [buildLimitError, setBuildLimitError] = useState(false);
+  const [portal, setPortal] = useState<{ id: string; token: string; status: string; client_name?: string; accepted_at?: string } | null>(null);
 
   useEffect(() => {
     let devSessId: string | null = null;
@@ -193,6 +194,17 @@ export default function ScopeProjectPage() {
     setAnswers(data.clarification_answers || {});
     setLoading(false);
     if (data.status === "complete") setTimeout(() => setScopeVisible(true), 50);
+
+    // Fetch portal status (only for real auth sessions)
+    if (!devSessId) {
+      try {
+        const pr = await fetch(`/api/portal/status?projectId=${params.id}`);
+        if (pr.ok) {
+          const pd = await pr.json();
+          if (pd.portal) setPortal(pd.portal);
+        }
+      } catch { /* ignore */ }
+    }
   }
 
   async function saveTitle() {
@@ -294,6 +306,18 @@ export default function ScopeProjectPage() {
           }}>
             {isComplete ? "Complete" : "Draft"}
           </span>
+          {portal && (
+            <span style={{
+              fontSize: 10, padding: "3px 8px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase",
+              background: portal.status === "accepted" ? "#f0fdf4" : "#eff6ff",
+              color: portal.status === "accepted" ? "#16a34a" : "#2563eb",
+              border: `1px solid ${portal.status === "accepted" ? "#bbf7d0" : "#bfdbfe"}`,
+            }}>
+              {portal.status === "accepted"
+                ? `Portal: Accepted ✓${portal.client_name ? ` by ${portal.client_name}` : ""}`
+                : "Portal: Awaiting acceptance"}
+            </span>
+          )}
           {isComplete && (
             <Link href={`/scope/${project.id}/proposal`} style={{ background: "var(--accent)", color: "var(--accent-text)", padding: "8px 16px", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", letterSpacing: "0.02em" }}>
               Generate proposal →

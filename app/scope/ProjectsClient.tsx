@@ -8,6 +8,8 @@ interface Project {
   status: string;
   created_at: string;
   original_enquiry: string;
+  portal_status?: string | null;
+  portal_sent_at?: string | null;
 }
 
 function DeleteModal({ projectId, onClose, onDeleted }: { projectId: string; onClose: () => void; onDeleted: (id: string) => void }) {
@@ -121,15 +123,15 @@ export default function ProjectsClient({ initialProjects }: { initialProjects: P
       )}
       <div style={{ borderTop: "1px solid var(--border)" }}>
         {/* Table header */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 140px 40px 44px", padding: "12px 0", borderBottom: "1px solid var(--border)" }}>
-          {["Project", "Status", "Date", "", ""].map((h, i) => (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 130px 140px 40px 44px", padding: "12px 0", borderBottom: "1px solid var(--border)" }}>
+          {["Project", "Status", "Portal", "Date", "", ""].map((h, i) => (
             <div key={i} style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text4)" }}>{h}</div>
           ))}
         </div>
         {projects.map((p) => (
           <div
             key={p.id}
-            style={{ display: "grid", gridTemplateColumns: "1fr 100px 140px 40px 44px", borderBottom: "1px solid var(--border)", alignItems: "center" }}
+            style={{ display: "grid", gridTemplateColumns: "1fr 100px 130px 140px 40px 44px", borderBottom: "1px solid var(--border)", alignItems: "center" }}
           >
             <Link
               href={`/scope/${p.id}`}
@@ -146,12 +148,23 @@ export default function ProjectsClient({ initialProjects }: { initialProjects: P
               <div style={{ padding: "20px 0" }}>
                 <span style={{
                   fontSize: 11, padding: "3px 8px", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase",
-                  background: p.status === "complete" ? "var(--accent)" : "var(--bg3)",
-                  color: p.status === "complete" ? "var(--accent-text)" : "var(--text3)",
+                  background: p.status === "complete" || p.status === "accepted" ? "var(--accent)" : "var(--bg3)",
+                  color: p.status === "complete" || p.status === "accepted" ? "var(--accent-text)" : "var(--text3)",
                   display: "inline-block",
                 }}>
-                  {p.status === "complete" ? "Complete" : "Draft"}
+                  {p.status === "accepted" ? "Accepted" : p.status === "complete" ? "Complete" : "Draft"}
                 </span>
+              </div>
+              <div style={{ padding: "20px 0" }}>
+                {p.portal_status === "accepted" ? (
+                  <span style={{ fontSize: 11, padding: "3px 8px", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0", display: "inline-block" }}>
+                    Accepted
+                  </span>
+                ) : p.portal_status === "pending" ? (
+                  <span style={{ fontSize: 11, padding: "3px 8px", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", background: "#eff6ff", color: "#2563eb", border: "1px solid #bfdbfe", display: "inline-block" }}>
+                    Portal sent
+                  </span>
+                ) : null}
               </div>
               <div style={{ padding: "20px 0", fontSize: 13, color: "var(--text4)" }}>
                 {new Date(p.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}

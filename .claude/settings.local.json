@@ -27,7 +27,8 @@
       "Bash(find C:Usersmavinagentboard -maxdepth 3 -type d -not -path */node_modules/* -not -path */.next/* -not -path */dist-electron/*)",
       "Bash(npm audit:*)",
       "Bash(\"C:\\\\Users\\\\mavin\\\\agentboard\\\\app\\\\ProductShowcase.tsx\":*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(find /c/Users/mavin/agentboard -type f -name *portal* -o -name *invite* -o -name *client*)"
     ]
   }
 }

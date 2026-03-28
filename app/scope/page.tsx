@@ -46,6 +46,22 @@ export default async function ScopePage() {
         .eq("user_id", devSession.id)
         .order("created_at", { ascending: false });
 
+      const devProjectIds = (devProjects ?? []).map((p) => p.id);
+      const { data: devPortals } = devProjectIds.length > 0
+        ? await serviceSupabase.from("client_portals").select("project_id, status, created_at").in("project_id", devProjectIds)
+        : { data: [] };
+
+      const devPortalMap: Record<string, { portal_status: string; portal_sent_at: string }> = {};
+      for (const portal of devPortals ?? []) {
+        devPortalMap[portal.project_id] = { portal_status: portal.status, portal_sent_at: portal.created_at };
+      }
+
+      const devProjectsWithPortal = (devProjects ?? []).map((p) => ({
+        ...p,
+        portal_status: devPortalMap[p.id]?.portal_status ?? null,
+        portal_sent_at: devPortalMap[p.id]?.portal_sent_at ?? null,
+      }));
+
       return (
         <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>
           <Sidebar />
@@ -60,7 +76,7 @@ export default async function ScopePage() {
                 New project →
               </Link>
             </div>
-            <ProjectsClient initialProjects={devProjects ?? []} />
+            <ProjectsClient initialProjects={devProjectsWithPortal} />
           </main>
         </div>
       );
@@ -98,6 +114,22 @@ export default async function ScopePage() {
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
+  const projectIds = (projects ?? []).map((p) => p.id);
+  const { data: portals } = projectIds.length > 0
+    ? await serviceSupabase.from("client_portals").select("project_id, status, created_at").in("project_id", projectIds)
+    : { data: [] };
+
+  const portalMap: Record<string, { portal_status: string; portal_sent_at: string }> = {};
+  for (const portal of portals ?? []) {
+    portalMap[portal.project_id] = { portal_status: portal.status, portal_sent_at: portal.created_at };
+  }
+
+  const projectsWithPortal = (projects ?? []).map((p) => ({
+    ...p,
+    portal_status: portalMap[p.id]?.portal_status ?? null,
+    portal_sent_at: portalMap[p.id]?.portal_sent_at ?? null,
+  }));
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>
       <Sidebar />
@@ -114,7 +146,7 @@ export default async function ScopePage() {
           </Link>
         </div>
 
-        <ProjectsClient initialProjects={projects ?? []} />
+        <ProjectsClient initialProjects={projectsWithPortal} />
 
       </main>
     </div>

@@ -4,6 +4,137 @@ import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import Link from "next/link";
 
+interface SendModalProps {
+  projectId: string;
+  devSessionId: string | null;
+  onClose: () => void;
+}
+
+function SendModal({ projectId, onClose }: SendModalProps) {
+  const [clientName, setClientName] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [portalUrl, setPortalUrl] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleGenerate() {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/portal/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, clientName: clientName || undefined, clientEmail: clientEmail || undefined, message: message || undefined }),
+      });
+      const d = await res.json();
+      if (!res.ok) { setError(d.error || "Something went wrong"); return; }
+      setPortalUrl(d.portalUrl);
+    } catch {
+      setError("Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleCopy() {
+    if (!portalUrl) return;
+    await navigator.clipboard.writeText(portalUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <div
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div style={{ background: "var(--surface)", border: "1px solid var(--border)", padding: "40px 36px", width: "100%", maxWidth: 480 }}>
+        <h2 style={{ fontSize: 20, fontWeight: 800, color: "var(--text)", margin: "0 0 24px", letterSpacing: "-0.03em" }}>Send proposal to client</h2>
+
+        {!portalUrl ? (
+          <>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 24 }}>
+              <input
+                type="text"
+                placeholder="Client name (optional)"
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
+                style={{ border: "1px solid var(--border)", padding: "12px 14px", fontSize: 14, background: "var(--bg)", color: "var(--text)", outline: "none", boxSizing: "border-box", width: "100%" }}
+              />
+              <input
+                type="email"
+                placeholder="Client email (optional, for notifications)"
+                value={clientEmail}
+                onChange={(e) => setClientEmail(e.target.value)}
+                style={{ border: "1px solid var(--border)", padding: "12px 14px", fontSize: 14, background: "var(--bg)", color: "var(--text)", outline: "none", boxSizing: "border-box", width: "100%" }}
+              />
+              <textarea
+                placeholder="Personal message (optional, shown at top of portal)"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                rows={3}
+                style={{ border: "1px solid var(--border)", padding: "12px 14px", fontSize: 14, background: "var(--bg)", color: "var(--text)", outline: "none", resize: "vertical", boxSizing: "border-box", width: "100%", lineHeight: 1.6 }}
+              />
+            </div>
+            {error && (
+              <div style={{ background: "var(--err-bg)", border: "1px solid var(--err-bdr)", padding: "10px 14px", fontSize: 13, color: "var(--err-text)", marginBottom: 16 }}>
+                {error}
+              </div>
+            )}
+            <div style={{ display: "flex", gap: 12 }}>
+              <button
+                onClick={handleGenerate}
+                disabled={loading}
+                style={{ flex: 1, height: 44, background: "var(--accent)", color: "var(--accent-text)", border: "none", fontSize: 14, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, letterSpacing: "0.02em" }}
+              >
+                {loading ? "Generating..." : "Generate portal link →"}
+              </button>
+              <button onClick={onClose} style={{ height: 44, background: "none", border: "1px solid var(--border)", color: "var(--text3)", fontSize: 14, fontWeight: 600, cursor: "pointer", padding: "0 20px" }}>
+                Cancel
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p style={{ fontSize: 14, color: "var(--text3)", margin: "0 0 16px" }}>Your portal link is ready. Share it with your client.</p>
+            <div style={{ display: "flex", gap: 0, marginBottom: 16 }}>
+              <input
+                readOnly
+                value={portalUrl}
+                style={{ flex: 1, border: "1px solid var(--border)", borderRight: "none", padding: "10px 14px", fontSize: 13, background: "var(--bg2)", color: "var(--text2)", outline: "none", boxSizing: "border-box", fontFamily: "monospace" }}
+              />
+              <button
+                onClick={handleCopy}
+                style={{ background: copied ? "#16a34a" : "var(--accent)", color: copied ? "#fff" : "var(--accent-text)", border: "none", padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", letterSpacing: "0.02em" }}
+              >
+                {copied ? "✓ Copied!" : "Copy link"}
+              </button>
+            </div>
+            <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
+              <a
+                href={portalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ fontSize: 14, color: "var(--text)", fontWeight: 600, textDecoration: "underline" }}
+              >
+                Open preview →
+              </a>
+            </div>
+            <p style={{ fontSize: 12, color: "var(--text4)", margin: "0 0 20px", lineHeight: 1.6 }}>
+              Share this link with your client. They can view and accept the proposal without creating an account.
+            </p>
+            <button onClick={onClose} style={{ width: "100%", height: 40, background: "none", border: "1px solid var(--border)", color: "var(--text3)", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+              Done
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 interface ScopeData {
   included?: string[];
   excluded?: string[];
@@ -71,6 +202,7 @@ export default function ProposalPage() {
   const [exportMode, setExportMode] = useState(false);
   const [selectedSections, setSelectedSections] = useState<Set<SectionId>>(new Set(SECTION_IDS));
   const [devSessionId, setDevSessionId] = useState<string | null>(null);
+  const [showSendModal, setShowSendModal] = useState(false);
 
   useEffect(() => {
     const projectId = params.id;
@@ -238,6 +370,13 @@ export default function ProposalPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
+      {showSendModal && project && (
+        <SendModal
+          projectId={project.id}
+          devSessionId={devSessionId}
+          onClose={() => setShowSendModal(false)}
+        />
+      )}
       {/* Sticky header */}
       <div style={{ position: "sticky", top: 0, zIndex: 30, background: "var(--surface)", borderBottom: "1px solid var(--border)", padding: "0 48px", height: 60, display: "flex", alignItems: "center", gap: 16 }}>
         <Link href={`/scope/${params.id}`} style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text4)", whiteSpace: "nowrap" }}>← Back</Link>
@@ -249,6 +388,12 @@ export default function ProposalPage() {
           </span>
         )}
         <div style={{ display: "flex", gap: 0, flexShrink: 0 }}>
+          <button
+            onClick={() => setShowSendModal(true)}
+            style={{ background: "var(--accent)", color: "var(--accent-text)", border: "none", padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", letterSpacing: "0.02em", marginRight: 8 }}
+          >
+            Send to client →
+          </button>
           <button onClick={() => { setEditing(!editing); if (editing) saveProposal(); }} style={{ background: "none", border: "1px solid var(--border)", padding: "8px 14px", fontSize: 13, fontWeight: 600, color: "var(--text)", cursor: "pointer", borderRight: "none" }}>
             {editing ? "Save ✓" : "Edit"}
           </button>
