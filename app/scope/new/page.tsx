@@ -14,6 +14,7 @@ export default function NewScopePage() {
   const [limitError, setLimitError] = useState(false);
   const [focused, setFocused] = useState(false);
   const [devSessionId, setDevSessionId] = useState<string | null>(null);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -71,24 +72,31 @@ export default function NewScopePage() {
             </p>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
-              {INDUSTRY_TEMPLATES.map((t) => (
+              {INDUSTRY_TEMPLATES.map((t) => {
+                const isSelected = industryId === t.id;
+                const isHovered = hoveredId === t.id;
+                return (
                 <button
                   key={t.id}
                   onClick={() => { setIndustryId(t.id); setStep(2); }}
+                  onMouseEnter={() => setHoveredId(t.id)}
+                  onMouseLeave={() => setHoveredId(null)}
                   style={{
-                    background: "var(--surface)",
-                    border: `2px solid ${industryId === t.id ? "var(--accent)" : "var(--border)"}`,
+                    background: isSelected ? "#0a1a00" : "#000000",
+                    border: isSelected || isHovered ? "1px solid #c8f135" : "1px solid #1f1f1f",
+                    boxShadow: isSelected || isHovered ? "0 0 0 1px #c8f135" : "none",
                     padding: "20px 16px",
                     textAlign: "left",
                     cursor: "pointer",
-                    transition: "border-color 0.15s",
+                    transition: "border 0.15s ease, box-shadow 0.15s ease, background 0.15s ease",
                   }}
                 >
                   <div style={{ fontSize: 28, marginBottom: 10 }}>{t.icon}</div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", marginBottom: 4 }}>{t.name}</div>
                   <div style={{ fontSize: 12, color: "var(--text4)", lineHeight: 1.5 }}>{t.description}</div>
                 </button>
-              ))}
+              );
+              })}
             </div>
           </div>
         </main>
