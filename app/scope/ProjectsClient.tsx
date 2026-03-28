@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { detectRedFlags } from "@/lib/redFlags";
 
 interface Project {
   id: string;
@@ -123,15 +124,20 @@ export default function ProjectsClient({ initialProjects }: { initialProjects: P
       )}
       <div style={{ borderTop: "1px solid var(--border)" }}>
         {/* Table header */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 130px 140px 40px 44px", padding: "12px 0", borderBottom: "1px solid var(--border)" }}>
-          {["Project", "Status", "Portal", "Date", "", ""].map((h, i) => (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 100px 130px 140px 40px 44px", padding: "12px 0", borderBottom: "1px solid var(--border)" }}>
+          {["Project", "Status", "Risk", "Portal", "Date", "", ""].map((h, i) => (
             <div key={i} style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text4)" }}>{h}</div>
           ))}
         </div>
-        {projects.map((p) => (
+        {projects.map((p) => {
+          const flags = p.original_enquiry ? detectRedFlags(p.original_enquiry) : [];
+          const highCount = flags.filter((f) => f.flag.severity === "high").length;
+          const otherCount = flags.filter((f) => f.flag.severity !== "high").length;
+
+          return (
           <div
             key={p.id}
-            style={{ display: "grid", gridTemplateColumns: "1fr 100px 130px 140px 40px 44px", borderBottom: "1px solid var(--border)", alignItems: "center" }}
+            style={{ display: "grid", gridTemplateColumns: "1fr 100px 100px 130px 140px 40px 44px", borderBottom: "1px solid var(--border)", alignItems: "center" }}
           >
             <Link
               href={`/scope/${p.id}`}
@@ -154,6 +160,17 @@ export default function ProjectsClient({ initialProjects }: { initialProjects: P
                 }}>
                   {p.status === "accepted" ? "Accepted" : p.status === "complete" ? "Complete" : "Draft"}
                 </span>
+              </div>
+              <div style={{ padding: "20px 0" }}>
+                {highCount > 0 ? (
+                  <span style={{ fontSize: 11, padding: "3px 8px", fontWeight: 700, letterSpacing: "0.04em", background: "#3d0000", color: "#ff6b6b", border: "1px solid #ef444444", display: "inline-block" }}>
+                    ⚠ {highCount} risk{highCount !== 1 ? "s" : ""}
+                  </span>
+                ) : otherCount > 0 ? (
+                  <span style={{ fontSize: 11, padding: "3px 8px", fontWeight: 700, letterSpacing: "0.04em", background: "#2d1a00", color: "#fbbf24", border: "1px solid #f59e0b44", display: "inline-block" }}>
+                    ! {otherCount} flag{otherCount !== 1 ? "s" : ""}
+                  </span>
+                ) : null}
               </div>
               <div style={{ padding: "20px 0" }}>
                 {p.portal_status === "accepted" ? (
@@ -181,7 +198,8 @@ export default function ProjectsClient({ initialProjects }: { initialProjects: P
               </button>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </>
   );

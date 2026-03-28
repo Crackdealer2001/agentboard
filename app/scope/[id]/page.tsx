@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+import { highlightRedFlags, detectRedFlags } from "@/lib/redFlags";
+import type { RedFlag } from "@/lib/redFlags";
 
 function DeleteModal({ projectId, devSessionId, onClose }: { projectId: string; devSessionId?: string | null; onClose: () => void }) {
   const router = useRouter();
@@ -159,6 +161,8 @@ export default function ScopeProjectPage() {
   const [devSessionId, setDevSessionId] = useState<string | null>(null);
   const [buildLimitError, setBuildLimitError] = useState(false);
   const [portal, setPortal] = useState<{ id: string; token: string; status: string; client_name?: string; accepted_at?: string } | null>(null);
+  const [activeSegIdx, setActiveSegIdx] = useState<number | null>(null);
+  const [severityFilter, setSeverityFilter] = useState<Set<string>>(new Set(["high", "medium", "low"]));
 
   useEffect(() => {
     let devSessId: string | null = null;
@@ -334,6 +338,154 @@ export default function ScopeProjectPage() {
 
       {/* Body */}
       <div className="scope-body" style={{ maxWidth: 860, margin: "0 auto", padding: "48px 48px 100px" }}>
+
+        {/* RED FLAG ANALYSIS */}
+        {project.original_enquiry && (() => {
+          const { segments } = highlightRedFlags(project.original_enquiry);
+          const flagSegments = segments.filter((s) => s.flag);
+          const highCount = flagSegments.filter((s) => s.flag?.severity === "high").length;
+          const medCount = flagSegments.filter((s) => s.flag?.severity === "medium").length;
+          const lowCount = flagSegments.filter((s) => s.flag?.severity === "low").length;
+          const totalFlags = highCount + medCount + lowCount;
+          const activeFlag: RedFlag | undefined =
+            activeSegIdx !== null ? segments[activeSegIdx]?.flag : undefined;
+
+          const severityStyle = (sev: string) => {
+            if (sev === "high") return { bg: "#3d0000", color: "#ff6b6b", borderBottom: "2px solid #ef4444" };
+            if (sev === "medium") return { bg: "#2d1a00", color: "#fbbf24", borderBottom: "2px solid #f59e0b" };
+            return { bg: "#1a1a00", color: "#fde68a", borderBottom: "2px solid #eab308" };
+          };
+
+          const toggleSeverity = (sev: string) => {
+            setSeverityFilter((prev) => {
+              const next = new Set(prev);
+              if (next.has(sev)) { next.delete(sev); } else { next.add(sev); }
+              return next;
+            });
+            setActiveSegIdx(null);
+          };
+
+          return (
+            <div style={{ ...section, borderTop: "none", paddingTop: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
+                <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--accent)" }}>
+                  Red Flag Analysis
+                </span>
+              </div>
+              <p style={{ fontSize: 13, color: "var(--text4)", margin: "0 0 20px" }}>
+                Dangerous phrases detected in the client&apos;s brief
+              </p>
+
+              {/* Summary bar */}
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
+                {totalFlags === 0 ? (
+                  <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#4ade80", fontWeight: 600 }}>
+                    <span style={{ fontSize: 16 }}>✓</span> No red flags detected
+                  </span>
+                ) : (
+                  <>
+                    {highCount > 0 && (
+                      <button
+                        onClick={() => toggleSeverity("high")}
+                        style={{ display: "flex", alignItems: "center", gap: 6, border: "none", cursor: "pointer", padding: "4px 10px", fontSize: 12, fontWeight: 700, color: severityFilter.has("high") ? "#ff6b6b" : "var(--text4)", background: severityFilter.has("high") ? "#3d0000" : "var(--bg3)", letterSpacing: "0.04em" }}
+                      >
+                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#ef4444", flexShrink: 0, display: "inline-block" }} />
+                        {highCount} high risk
+                      </button>
+                    )}
+                    {medCount > 0 && (
+                      <button
+                        onClick={() => toggleSeverity("medium")}
+                        style={{ display: "flex", alignItems: "center", gap: 6, border: "none", cursor: "pointer", padding: "4px 10px", fontSize: 12, fontWeight: 700, color: severityFilter.has("medium") ? "#fbbf24" : "var(--text4)", background: severityFilter.has("medium") ? "#2d1a00" : "var(--bg3)", letterSpacing: "0.04em" }}
+                      >
+                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#f59e0b", flexShrink: 0, display: "inline-block" }} />
+                        {medCount} medium risk
+                      </button>
+                    )}
+                    {lowCount > 0 && (
+                      <button
+                        onClick={() => toggleSeverity("low")}
+                        style={{ display: "flex", alignItems: "center", gap: 6, border: "none", cursor: "pointer", padding: "4px 10px", fontSize: 12, fontWeight: 700, color: severityFilter.has("low") ? "#fde68a" : "var(--text4)", background: severityFilter.has("low") ? "#1a1a00" : "var(--bg3)", letterSpacing: "0.04em" }}
+                      >
+                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#eab308", flexShrink: 0, display: "inline-block" }} />
+                        {lowCount} low risk
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* Highlighted text */}
+              {totalFlags === 0 ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "20px 24px", background: "rgba(74,222,128,0.06)", border: "1px solid rgba(74,222,128,0.2)" }}>
+                  <span style={{ fontSize: 20, color: "#4ade80" }}>✓</span>
+                  <div>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: "#4ade80", margin: "0 0 2px" }}>No red flags detected in this brief</p>
+                    <p style={{ fontSize: 13, color: "var(--text4)", margin: 0 }}>This brief appears clear and well-defined.</p>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ background: "var(--bg2)", border: "1px solid var(--border)", padding: "20px 24px" }}>
+                  <p style={{ fontSize: 15, color: "var(--text2)", lineHeight: 1.8, margin: 0 }}>
+                    {segments.map((seg, i) => {
+                      if (!seg.flag || !severityFilter.has(seg.flag.severity)) {
+                        return <span key={i}>{seg.text}</span>;
+                      }
+                      const s = severityStyle(seg.flag.severity);
+                      const isActive = activeSegIdx === i;
+                      return (
+                        <span
+                          key={i}
+                          onClick={() => setActiveSegIdx(isActive ? null : i)}
+                          style={{ background: s.bg, color: s.color, borderBottom: s.borderBottom, cursor: "pointer", padding: "1px 2px", borderRadius: 2, fontWeight: 600, outline: isActive ? `2px solid ${s.color}` : "none", outlineOffset: 1 }}
+                          title={seg.flag.title}
+                        >
+                          {seg.text}
+                        </span>
+                      );
+                    })}
+                  </p>
+                </div>
+              )}
+
+              {/* Active flag card */}
+              <div style={{ overflow: "hidden", maxHeight: activeFlag ? 400 : 0, transition: "max-height 0.25s ease", marginTop: activeFlag ? 8 : 0 }}>
+                {activeFlag && (
+                  <div style={{ background: severityStyle(activeFlag.severity).bg, border: `1px solid ${severityStyle(activeFlag.severity).color}22`, padding: "20px 24px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", letterSpacing: "0.08em", textTransform: "uppercase", background: "rgba(255,255,255,0.08)", color: "var(--text3)" }}>
+                          {activeFlag.category}
+                        </span>
+                        <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", letterSpacing: "0.08em", textTransform: "uppercase", background: severityStyle(activeFlag.severity).bg, color: severityStyle(activeFlag.severity).color, border: `1px solid ${severityStyle(activeFlag.severity).color}44` }}>
+                          {activeFlag.severity}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => setActiveSegIdx(null)}
+                        style={{ background: "none", border: "none", color: "var(--text4)", cursor: "pointer", fontSize: 18, lineHeight: 1, padding: "0 0 0 16px", flexShrink: 0 }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <p style={{ fontSize: 15, fontWeight: 700, color: "var(--text)", margin: "0 0 8px", letterSpacing: "-0.01em" }}>
+                      {activeFlag.title}
+                    </p>
+                    <p style={{ fontSize: 14, color: "var(--text3)", margin: "0 0 16px", lineHeight: 1.6 }}>
+                      {activeFlag.explanation}
+                    </p>
+                    <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                      <span style={{ fontSize: 14, flexShrink: 0 }}>💡</span>
+                      <p style={{ fontSize: 13, color: "var(--accent)", margin: 0, lineHeight: 1.6 }}>
+                        <span style={{ fontWeight: 700 }}>Tip: </span>{activeFlag.tip}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Section 1 — Original enquiry */}
         <div style={section}>
