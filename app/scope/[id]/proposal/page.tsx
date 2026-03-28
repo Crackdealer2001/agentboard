@@ -23,10 +23,19 @@ function SendModal({ projectId, onClose }: SendModalProps) {
     setLoading(true);
     setError("");
     try {
+      let devSessionId: string | undefined;
+      try {
+        const stored = localStorage.getItem("dev_session");
+        if (stored) {
+          const parsed = JSON.parse(stored) as { sessionId?: string };
+          devSessionId = parsed.sessionId ?? undefined;
+        }
+      } catch { /* ignore */ }
+
       const res = await fetch("/api/portal/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, clientName: clientName || undefined, clientEmail: clientEmail || undefined, message: message || undefined }),
+        body: JSON.stringify({ projectId, clientName: clientName || undefined, clientEmail: clientEmail || undefined, message: message || undefined, devSessionId }),
       });
       const d = await res.json();
       if (!res.ok) { setError(d.error || "Something went wrong"); return; }
