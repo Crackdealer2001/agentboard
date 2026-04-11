@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
     const devSessionId = body?.devSessionId as string | undefined;
     const industryId = (body?.industryId as string | undefined) || "general";
     const template = getTemplateById(industryId);
+    const rawAttachments = (body?.attachments as Array<{ name: string; type: string; size: number; data?: string }> | undefined) || [];
 
     if (!rawEnquiry || typeof rawEnquiry !== "string" || !rawEnquiry.trim()) {
       return NextResponse.json({ error: "enquiry is required" }, { status: 400 });
@@ -139,13 +140,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Failed to create project" }, { status: 500 });
     }
 
+    // Filter image attachments that have base64 data
+    const imageAttachments = rawAttachments.filter((a) => a.type.startsWith("image/") && a.data);
+
+    const visualRefsInstruction = imageAttachments.length > 0
+      ? `\nThe client has provided ${imageAttachments.length} reference image(s) above. Please analyse these images and note: dominant colors and palette, design style (minimal, bold, playful, corporate etc), typography style if visible, layout preferences, and overall aesthetic direction. Add these observations to extracted_info.visual_references as an array of observations.`
+      : "";
+
     const extractPrompt = `You are an expert project scoper. Analyse this client enquiry and extract structured information.
 
 Client enquiry:
 """
 ${enquiry}
 """
-${template ? `\n${template.extractPromptAddition}\n` : ""}
+${template ? `\n${template.extractPromptAddition}\n` : ""}${visualRefsInstruction}
 Respond with ONLY a valid JSON object (no markdown, no code blocks) with these exact fields:
 {
   "suggested_title": "concise project title",
@@ -156,13 +164,32 @@ Respond with ONLY a valid JSON object (no markdown, no code blocks) with these e
   "budget_mentioned": "budget if mentioned, else null",
   "missing_details": ["array of important details that are unclear or missing"],
   "risk_flags": ["array of potential risks or concerns for the project"],
-  "clarifying_questions": ["array of 3-5 specific questions to ask the client to fill in the gaps"]
+  "clarifying_questions": ["array of 3-5 specific questions to ask the client to fill in the gaps"]${imageAttachments.length > 0 ? `,\n  "visual_references": ["array of style observations from the reference images"]` : ""}
 }`;
+
+    // Build message content (images first, then text)
+    const messageContent: Anthropic.MessageParam["content"] = [];
+
+    for (const attachment of imageAttachments) {
+      const data = attachment.data!;
+      // Strip data URL prefix if present: "data:image/jpeg;base64,..."
+      const base64Data = data.includes(",") ? data.split(",")[1] : data;
+      messageContent.push({
+        type: "image",
+        source: {
+          type: "base64",
+          media_type: attachment.type as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
+          data: base64Data,
+        },
+      });
+    }
+
+    messageContent.push({ type: "text", text: extractPrompt });
 
     const message = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 2000,
-      messages: [{ role: "user", content: extractPrompt }]
+      messages: [{ role: "user", content: messageContent }],
     });
 
     const content = message.content[0];

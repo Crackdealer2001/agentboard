@@ -88,6 +88,13 @@ function DeleteModal({ projectId, devSessionId, onClose }: { projectId: string; 
   );
 }
 
+interface Attachment {
+  name: string;
+  url: string;
+  type: string;
+  size: number;
+}
+
 interface Project {
   id: string;
   title: string;
@@ -99,6 +106,7 @@ interface Project {
     deadline?: string;
     budget_mentioned?: string;
     missing_details?: string[];
+    visual_references?: string[];
   };
   clarifying_questions: string[];
   clarification_answers: Record<string, string>;
@@ -114,6 +122,7 @@ interface Project {
   risk_flags: string[];
   proposal: string;
   status: string;
+  attachments?: Attachment[];
 }
 
 const label: React.CSSProperties = {
@@ -514,6 +523,59 @@ export default function ScopeProjectPage() {
           </div>
         </div>
 
+        {/* Attachments section */}
+        {project.attachments && project.attachments.length > 0 && (
+          <div style={section}>
+            <span style={label}>Attachments</span>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+              {project.attachments.map((att, i) => {
+                const isImg = att.type.startsWith("image/");
+                return (
+                  <a
+                    key={i}
+                    href={att.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    download={!isImg ? att.name : undefined}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: 8,
+                      background: "#000",
+                      border: "1px solid #1f1f1f",
+                      padding: 12,
+                      width: 120,
+                      textDecoration: "none",
+                      cursor: "pointer",
+                      transition: "border-color 0.15s",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#333")}
+                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#1f1f1f")}
+                  >
+                    {isImg ? (
+                      <div style={{ width: 96, height: 72, overflow: "hidden", background: "#111", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={att.url} alt={att.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      </div>
+                    ) : (
+                      <div style={{ width: 96, height: 72, background: "#111", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                          <rect x="5" y="2" width="22" height="28" rx="2" fill="#1a1a1a" stroke="#333" strokeWidth="1.5"/>
+                          <path d="M10 11h12M10 16h12M10 21h7" stroke="#555" strokeWidth="1.5" strokeLinecap="round"/>
+                        </svg>
+                      </div>
+                    )}
+                    <span style={{ fontSize: 11, color: "var(--text3)", textAlign: "center", lineHeight: 1.4, wordBreak: "break-word", width: "100%" }}>
+                      {att.name.length > 20 ? att.name.slice(0, 17) + "..." : att.name}
+                    </span>
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Section 2 — Analysis */}
         <div style={section}>
           <span style={label}>Analysis</span>
@@ -568,6 +630,16 @@ export default function ScopeProjectPage() {
                   </span>
                 ))}
               </div>
+            </div>
+          )}
+          {info.visual_references && info.visual_references.length > 0 && (
+            <div style={{ marginTop: 28 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text4)", marginBottom: 12 }}>Visual References</div>
+              {info.visual_references.map((obs, i) => (
+                <div key={i} style={{ fontSize: 14, color: "var(--text2)", lineHeight: 1.7, paddingTop: 8, paddingBottom: 8, borderBottom: "1px solid var(--border)", display: "flex", gap: 12 }}>
+                  <span style={{ color: "var(--accent)", flexShrink: 0, marginTop: 2 }}>◆</span>{obs}
+                </div>
+              ))}
             </div>
           )}
         </div>

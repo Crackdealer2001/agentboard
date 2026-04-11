@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
       userId = user.id;
     }
 
-    const allowedFields = ["title", "clarification_answers", "proposal", "proposal_email", "status", "scope", "key_points"];
+    const allowedFields = ["title", "clarification_answers", "proposal", "proposal_email", "status", "scope", "key_points", "attachments"];
     const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
     for (const key of allowedFields) {
       if (key in fields) {
